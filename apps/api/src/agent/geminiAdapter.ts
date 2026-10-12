@@ -32,7 +32,7 @@ export class GeminiAdapter implements IModelAdapter {
     this.model = (config.model ?? process.env.GEMINI_MODEL ?? DEFAULT_GEMINI_MODEL).trim() || DEFAULT_GEMINI_MODEL;
     this.baseUrl = (config.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, '');
     this.timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-    this.fetchFn = config.fetchFn ?? globalThis.fetch;
+    this.fetchFn = config.fetchFn ?? fetch;
 
     if (typeof this.fetchFn !== 'function') {
       throw new Error('A global fetch implementation is required for GeminiAdapter.');

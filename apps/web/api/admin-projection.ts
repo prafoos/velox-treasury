@@ -129,13 +129,13 @@ function isUnavailableRead(value: unknown): value is { readonly unavailable: tru
 }
 
 export async function verifyAdminRole(client: CoreStateClient, account: `0x${string}`): Promise<void> {
-  let chainId: number;
+  let chainId: number | bigint;
   try {
     chainId = await client.getChainId();
   } catch {
     throw new WalletAuthConfigurationError('Admin network verification is unavailable.');
   }
-  if (chainId !== ARC_MAINNET_CHAIN_ID) {
+  if (typeof chainId !== 'number' || chainId !== ARC_MAINNET_CHAIN_ID) {
     throw new WalletAuthConfigurationError('Admin projection requires Arc Mainnet.');
   }
 

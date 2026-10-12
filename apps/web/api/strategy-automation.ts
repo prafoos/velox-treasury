@@ -270,7 +270,7 @@ export async function verifyConfirmedDepositTransaction(
   try {
     const decoded = decodeFunctionData({ abi: DEPOSIT_TRIGGER_ABI, data: transaction.input });
     if (decoded.functionName !== 'deposit' || decoded.args[0] <= 0n) return false;
-    const depositEvents = parseEventLogs({
+    const depositEvents = parseEventLogs<typeof DEPOSIT_TRIGGER_ABI, true, 'Deposit'>({
       abi: DEPOSIT_TRIGGER_ABI,
       logs: receipt.logs.filter((log) => log.address.toLowerCase() === coreAddress.toLowerCase()) as unknown as Log[],
       eventName: 'Deposit',
