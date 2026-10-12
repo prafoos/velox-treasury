@@ -1,0 +1,13 @@
+{
+  "name": "velox-treasury",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "engines": {
+    "node": ">=20 <21"
+  },
+  "scripts": {
+    "build": "pnpm --recursive --if-present run build",
+    "check": "pnpm --recursive run check",
+    "test": "pnpm --recursive run test"
+  }
+}

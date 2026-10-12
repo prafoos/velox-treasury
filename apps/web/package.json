@@ -1,0 +1,41 @@
+{
+  "name": "@velox/web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "check": "tsc --noEmit",
+    "automation:worker": "vite-node server/depositAutomationWorkerMain.ts",
+    "build:worker": "vite build --config vite.worker.config.ts",
+    "start:worker": "node dist-worker/worker.mjs",
+    "health:worker": "node dist-worker/worker.mjs --health",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@reown/appkit": "1.7.8",
+    "@reown/appkit-adapter-wagmi": "1.7.8",
+    "@tanstack/react-query": "^5.0.0",
+    "@velox/domain": "workspace:*",
+    "@velox/validation": "workspace:*",
+    "dotenv": "^16.4.5",
+    "pg": "8.13.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.0.0",
+    "viem": "^2.0.0",
+    "wagmi": "^2.0.0",
+    "zod": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/pg": "8.15.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "jsdom": "26.1.0",
+    "typescript": "^5.0.0",
+    "vite": "^6.0.0",
+    "vite-node": "3.2.4",
+    "vitest": "^3.0.0"
+  }
+}

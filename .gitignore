@@ -1,0 +1,78 @@
+# =========================
+# Secrets / Environment
+# =========================
+.env
+.env.*
+!.env.example
+!.env.template
+
+# =========================
+# Private keys / credentials
+# =========================
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Credential / secret files
+credentials.json
+secrets.json
+service-account.json
+serviceAccount.json
+
+# =========================
+# Node.js
+# =========================
+node_modules/
+
+# =========================
+# Build / generated output
+# =========================
+dist/
+dist-worker/
+.next/
+.vite/
+coverage/
+packages/contracts/artifacts/
+packages/contracts/cache/
+.tools/
+.pnpm-store/
+.vercel/
+.tmp-*
+*.tsbuildinfo
+*.sqlite
+*.sqlite3
+*.db
+
+# =========================
+# Logs
+# =========================
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Editors
+# =========================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+.idea/
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.temp
+*.swp
+*.swo
