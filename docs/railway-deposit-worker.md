@@ -36,7 +36,8 @@ Required:
 - `ARC_MAINNET_RPC_URL`
 - `POSTGRES_URL` — use a dedicated Neon branch for Preview/testing. Use the production database only for an
   explicitly authorized production run.
-- `VELIX_TREASURY_CORE_ADDRESS` — must be the approved current Core.
+- `VELOX_TREASURY_CORE_ADDRESS` — must be the approved current Core. (The earlier misspelling
+  `VELIX_TREASURY_CORE_ADDRESS` is still read as a fallback so existing deployments keep working; rename it.)
 - `STEAKHOUSE_ADAPTER_ADDRESS`
 - `DEPLOYER_PRIVATE_KEY` — the automation signer; it must hold `AUTOMATION_ROLE` and be funded for gas.
 

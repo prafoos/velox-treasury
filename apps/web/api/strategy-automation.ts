@@ -25,6 +25,7 @@ import {
   CURRENT_LIVE_ARC_MAINNET_ADAPTER_REFERENCE,
   APPROVED_ARC_MAINNET_CORE_ADDRESS,
   createArcMainnetExecutionConfig,
+  readConfiguredCoreAddress,
 } from '../../api/src/config/arc-mainnet.js';
 import { ARC_MAINNET_CORE_ROLE_HOLDERS } from '../../../packages/contracts/scripts/arc-mainnet-core-deployment-config.js';
 import { isRetiredArcMainnetAddress } from '@velox/domain';
@@ -493,7 +494,7 @@ function assessExecutionAddressConfiguration(): {
 } {
   return {
     core: assessExecutionAddress(
-      process.env.VELIX_TREASURY_CORE_ADDRESS,
+      readConfiguredCoreAddress(process.env),
       APPROVED_ARC_MAINNET_CORE_ADDRESS,
       APPROVED_ARC_MAINNET_CORE_ADDRESS,
     ),

@@ -38,11 +38,18 @@ function isProduction(environment: NodeJS.ProcessEnv): boolean {
   return environment.NODE_ENV === 'production' || environment.VERCEL_ENV === 'production';
 }
 
+const LEGACY_CORE_ADDRESS_ENV = 'VELIX_TREASURY_CORE_ADDRESS';
+
+// Reads the corrected name first; the misspelled legacy name is accepted only as a fallback for existing deployments.
+export function readConfiguredCoreAddress(environment: NodeJS.ProcessEnv): string | undefined {
+  return environment.VELOX_TREASURY_CORE_ADDRESS?.trim() || environment[LEGACY_CORE_ADDRESS_ENV]?.trim() || undefined;
+}
+
 export function createArcMainnetExecutionConfig(environment: NodeJS.ProcessEnv = process.env): ArcMainnetExecutionConfig {
-  const configuredCoreAddress = environment.VELIX_TREASURY_CORE_ADDRESS?.trim();
+  const configuredCoreAddress = readConfiguredCoreAddress(environment);
   const configuredAdapterAddress = environment.STEAKHOUSE_ADAPTER_ADDRESS?.trim();
   if (!configuredCoreAddress) {
-    throw new Error('VELIX_TREASURY_CORE_ADDRESS must be explicitly configured with the final Core address.');
+    throw new Error('VELOX_TREASURY_CORE_ADDRESS must be explicitly configured with the final Core address.');
   }
   if (!configuredAdapterAddress) {
     throw new Error('STEAKHOUSE_ADAPTER_ADDRESS must be explicitly configured with the final Adapter address.');
@@ -72,10 +79,10 @@ export function createArcMainnetExecutionConfig(environment: NodeJS.ProcessEnv =
 }
 
 export function createArcMainnetRuntimeConfig(environment: NodeJS.ProcessEnv = process.env): ArcMainnetExecutionConfig {
-  const hasCore = Boolean(environment.VELIX_TREASURY_CORE_ADDRESS?.trim());
+  const hasCore = Boolean(readConfiguredCoreAddress(environment));
   const hasAdapter = Boolean(environment.STEAKHOUSE_ADAPTER_ADDRESS?.trim());
   const configuredWebCoreAddress = environment.VITE_ARC_MAINNET_CORE_ADDRESS?.trim();
-  const configuredCoreAddress = environment.VELIX_TREASURY_CORE_ADDRESS?.trim();
+  const configuredCoreAddress = readConfiguredCoreAddress(environment);
   if (configuredCoreAddress && configuredWebCoreAddress
     && configuredCoreAddress.toLowerCase() !== configuredWebCoreAddress.toLowerCase()) {
     throw new Error('The API Core address must match VITE_ARC_MAINNET_CORE_ADDRESS.');
