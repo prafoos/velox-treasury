@@ -76,3 +76,21 @@ Thumbs.db
 *.temp
 *.swp
 *.swo
+
+# =========================
+# Accidental shell-artifact files (empty files created by mis-quoted commands)
+# =========================
+/([{]strategy
+/apps/api/[{]const
+/apps/web/[{]
+/console.log(await
+/packages/contracts/[{]
+/x.toString())))
+/[{]
+/[{]console.error(e)
+/[{]console.error(e.message)
+/[{]const
+
+# Local project notes and one-off scripts
+/train.md
+/arc-preflight.js
