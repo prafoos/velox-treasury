@@ -9,5 +9,8 @@
     "build": "pnpm --recursive --if-present run build",
     "check": "pnpm --recursive run check",
     "test": "pnpm --recursive run test"
+  },
+  "devDependencies": {
+    "railway": "^3.14.0"
   }
 }

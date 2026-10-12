@@ -12,13 +12,13 @@ and replay/age guards as `/api/strategy-automation`).
 - Repository root: the monorepo root (not `apps/web`).
 - Configuration: Railway Config as Code (`railway.json`/`railway.toml`) is deprecated and unavailable to new services
   (existing files stop being read 2026-12-01). This repo uses Infrastructure as Code in `.railway/railway.ts`
-  (service `deposit-worker`: build, start, 1 replica). It is applied with the Railway CLI, not read automatically:
+  (service `deposit-worker`: GitHub source, build, start, 1 replica). It is applied with the Railway CLI, not read automatically:
   `railway login`, `railway link` (the intended project and a non-production environment first), then
-  `railway config plan` and, after reviewing the plan, `railway config apply`. The file needs the `railway` package
-  only for the CLI evaluation (`npm install railway` in a scratch location or per the CLI prompts); it is deliberately
-  not added to this workspace's dependencies. Alternatively, enter the same values in the dashboard.
-- GitHub source/root directory: not declared in the file; connect the repository in the dashboard (repository root,
-  not `apps/web`), or add `source: github("<owner>/<repo>")` once the remote is known.
+  `railway config plan` and, after reviewing the plan, `railway config apply`. The `railway` SDK that provides
+  `railway/iac` is a root dev dependency (`^3.14.0`) and resolves locally; the Railway CLI is a separate install.
+  Alternatively, enter the same values in the dashboard.
+- GitHub source: declared in the file as `github("prafoos/velox-treasury", { branch: "main" })`. The root directory is
+  not declared and stays the repository root (not `apps/web`). The Railway GitHub app must have access to the repository.
 - Build command: `pnpm --filter @velox/web run build:worker` (Railway installs dependencies, including devDependencies
   such as vite, automatically before this step; `builder` is intentionally omitted so Railway's default builder is used).
 - Start command: `node apps/web/dist-worker/worker.mjs`
