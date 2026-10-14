@@ -64,26 +64,26 @@ const destinations = [
 
 const purposes = [
   {
-    title: 'Ready for Today',
-    description: 'Some of your USDC stays available for your everyday Treasury needs, so you can access it when needed.',
+    title: 'Liquid Operational Reserve',
+    description: 'USDC liquidity for operational needs and user withdrawals, subject to available liquidity and existing controls.',
     icon: 'today',
     tone: 'mint',
   },
   {
-    title: 'Put to Work',
-    description: 'Eligible USDC is placed into a selected, approved USDC yield opportunity. Your USDC is put to work there and can generate yield over time.',
+    title: 'Yield Strategy',
+    description: 'Explore approved yield opportunities when strategy eligibility and existing controls permit.',
     icon: 'work',
     tone: 'green',
   },
   {
-    title: 'Always Within Reach',
-    description: 'Velox keeps liquidity available so your available Treasury funds can be accessed when needed.',
+    title: 'Liquidity Availability',
+    description: 'Keep liquidity accessible when needed; this is not a separate swap balance.',
     icon: 'reach',
     tone: 'blue',
   },
   {
-    title: 'Smart & Prepared',
-    description: 'Some funds remain available for future opportunities, smart guidance, and planned Treasury actions.',
+    title: 'Automation & AI Guidance',
+    description: 'Use planning and recommendations for approved operations; AI guidance does not move funds or bypass existing controls.',
     icon: 'prepared',
     tone: 'violet',
   },
@@ -195,9 +195,9 @@ export function LandingPage() {
 
         <div className="vx-landing-purpose-support">
           <span className="vx-landing-overline">How Velox manages your USDC</span>
-          <h3>One Treasury. Four purposes.</h3>
+          <h3>One Treasury. Four ways to support your goals.</h3>
           <p className="vx-landing-purpose-intro">
-            Velox gives your USDC different purposes — keeping some ready, putting some to work, keeping liquidity within reach, and staying prepared for what comes next.
+            These are product concepts, not separate on-chain balances or a claim that funds have been allocated among them.
           </p>
           <div className="vx-landing-purpose-grid">
             {purposes.map((purpose) => (
