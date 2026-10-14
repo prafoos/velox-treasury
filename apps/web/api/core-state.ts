@@ -1,21 +1,21 @@
 import 'dotenv/config';
 
 import { createPublicClient, defineChain, getAddress, http, isAddress, type Address, type PublicClient } from 'viem';
-import { ARC_MAINNET_CHAIN_ID as CONFIGURED_ARC_MAINNET_CHAIN_ID, ARC_USDC_CONTRACT_ADDRESS, usdcReadAbi } from '../src/contracts/usdc';
+import { ARC_MAINNET_CHAIN_ID as CONFIGURED_ARC_MAINNET_CHAIN_ID, ARC_USDC_CONTRACT_ADDRESS, usdcReadAbi } from '../src/contracts/usdc.js';
 import { ARC_MAINNET_EXECUTION_CONFIG } from '../../api/src/config/arc-mainnet.js';
 import {
   AUTOMATION_ROLE,
   EMERGENCY_ROLE,
   POLICY_ADMIN_ROLE,
   TIMELOCK_EXECUTOR_ROLE,
-} from '../src/contracts/treasury';
-import type { UserFinancialProjectionModel } from '../src/types/userFinancialProjection';
+} from '../src/contracts/treasury.js';
+import type { UserFinancialProjectionModel } from '../src/types/userFinancialProjection.js';
 import {
   requireAuthenticatedWallet,
   respondToWalletAuthError,
   WalletAuthError,
   type WalletAuthRequest,
-} from '../server/wallet-auth';
+} from '../server/wallet-auth.js';
 
 export const ARC_MAINNET_CHAIN_ID = CONFIGURED_ARC_MAINNET_CHAIN_ID;
 export const ARC_MAINNET_CORE_ADDRESS = ARC_MAINNET_EXECUTION_CONFIG.coreAddress;

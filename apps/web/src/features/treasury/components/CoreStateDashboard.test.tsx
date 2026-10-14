@@ -112,7 +112,7 @@ describe('CoreStateDashboard strategy state', () => {
     expect(markup).toContain('Immediately withdrawable from liquid USDC');
     expect(markup).toContain('0.40 USDC');
     expect(markup).toContain('Earning position');
-    expect(markup).toContain('User-specific Steakhouse position data cannot currently be retrieved');
+    expect(markup).toContain('Action required: Your earning position cannot currently be verified');
     expect(markup).not.toMatch(/accounting|shared strategy|Core state|valuation block|On-chain state/i);
     expect(markup).not.toContain('1.20 USDC');
     expect(markup).not.toContain('Funded');

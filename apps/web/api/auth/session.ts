@@ -3,7 +3,7 @@ import {
   respondToWalletAuthError,
   type WalletAuthRequest,
   type WalletAuthResponse,
-} from '../../server/wallet-auth';
+} from '../../server/wallet-auth.js';
 
 export async function handleWalletAuthSessionRequest(
   request: WalletAuthRequest,

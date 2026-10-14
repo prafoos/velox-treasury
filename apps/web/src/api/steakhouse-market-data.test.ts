@@ -8,7 +8,7 @@ import {
   MARKET_SNAPSHOT_MAX_AGE_SECONDS,
   MORPHO_GRAPHQL_ENDPOINT,
   readVerifiedSteakhouseMarketSnapshot,
-} from '../../api/steakhouse-market-data';
+} from '../../server/steakhouseMarketData.js';
 import type { CoreStateClient } from '../../api/core-state';
 
 const walletAddress = '0x1111111111111111111111111111111111111111' as const;

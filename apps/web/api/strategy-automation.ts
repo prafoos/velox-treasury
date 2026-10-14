@@ -27,22 +27,24 @@ import {
   createArcMainnetExecutionConfig,
   readConfiguredCoreAddress,
 } from '../../api/src/config/arc-mainnet.js';
-import { ARC_MAINNET_CORE_ROLE_HOLDERS } from '../../../packages/contracts/scripts/arc-mainnet-core-deployment-config.js';
-import { isRetiredArcMainnetAddress } from '@velox/domain';
+import {
+  ARC_MAINNET_CORE_ROLE_HOLDERS,
+  isRetiredArcMainnetAddress,
+} from '../../../packages/domain/src/treasury-addresses.js';
 import {
   AUTOMATION_ROLE,
   POLICY_ADMIN_ROLE,
-} from '../src/contracts/treasury';
+} from '../src/contracts/treasury.js';
 import {
   assertRequestOrigin,
   requireAuthenticatedWallet,
   respondToWalletAuthError,
   type WalletAuthRequest,
-} from '../server/wallet-auth';
+} from '../server/wallet-auth.js';
 import {
   postgresStrategyAutomationTriggerStore,
   type StrategyAutomationTriggerStore,
-} from '../server/strategyAutomationTriggerStore';
+} from '../server/strategyAutomationTriggerStore.js';
 
 const STRATEGY_AUTOMATION_ABI = [
   {
@@ -239,6 +241,17 @@ export interface DepositVerificationClient {
   getBlockNumber(): Promise<bigint>;
 }
 
+function isDepositEventArgs(value: unknown): value is { readonly user: Address; readonly amount: bigint } {
+  return typeof value === 'object'
+    && value !== null
+    && !Array.isArray(value)
+    && 'user' in value
+    && 'amount' in value
+    && typeof value.user === 'string'
+    && isAddress(value.user)
+    && typeof value.amount === 'bigint';
+}
+
 export async function verifyConfirmedDepositTransaction(
   client: DepositVerificationClient,
   coreAddress: Address,
@@ -275,8 +288,8 @@ export async function verifyConfirmedDepositTransaction(
       logs: receipt.logs.filter((log) => log.address.toLowerCase() === coreAddress.toLowerCase()) as unknown as Log[],
       eventName: 'Deposit',
     });
-    return depositEvents.some((event) =>
-      event.args.user.toLowerCase() === depositor.toLowerCase()
+    return depositEvents.some((event) => isDepositEventArgs(event.args)
+      && event.args.user.toLowerCase() === depositor.toLowerCase()
       && event.args.amount === decoded.args[0]);
   } catch {
     return false;
@@ -684,8 +697,10 @@ export type StrategyAutomationFailureKind =
   | 'CONFIGURATION'
   | 'UNAUTHORIZED'
   | 'VALUATION_NOT_CURRENT'
+  | 'SIMULATION_FAILED'
   | 'TRANSACTION_FAILED'
-  | 'READBACK_FAILED';
+  | 'READBACK_FAILED'
+  | 'INTERNAL_ERROR';
 
 export class StrategyAutomationError extends Error {
   constructor(
@@ -924,8 +939,8 @@ export async function executeStrategyAutomation(
       );
     }
     throw new StrategyAutomationError(
-      'CONFIGURATION',
-      'Core simulation rejected the strategy operation under current policy, strategy, exposure, valuation, or liquidity checks; no transaction was submitted.',
+      'SIMULATION_FAILED',
+      'Core rejected the transaction simulation under its current on-chain rules. No transaction was submitted; verify Core pause, strategy approval, adapter state, and valuation, then consult the function log if the rejection persists.',
     );
   }
 
@@ -958,7 +973,11 @@ export async function executeStrategyAutomation(
     );
   }
   if (receipt.status !== 'success') {
-    throw new StrategyAutomationError('TRANSACTION_FAILED', 'The Core strategy transaction reverted.', transactionHash);
+    throw new StrategyAutomationError(
+      'TRANSACTION_FAILED',
+      'The Core transaction reverted on-chain and was not confirmed. Use the transaction hash to inspect its receipt and revert details.',
+      transactionHash,
+    );
   }
 
   let after: StrategyAutomationSnapshot;
@@ -1608,15 +1627,28 @@ export async function handleStrategyAutomationRequest(
       ),
     });
   } catch (error) {
-    const failure = error instanceof StrategyAutomationError
-      ? error
-      : new StrategyAutomationError('CONFIGURATION', 'Strategy executor configuration or Core verification failed.');
+    let failure: StrategyAutomationError;
+    if (error instanceof StrategyAutomationError) {
+      failure = error;
+    } else {
+      const correlationId = randomUUID();
+      console.error('Strategy automation request failed unexpectedly.', {
+        correlationId,
+        errorType: error instanceof Error ? 'Error' : 'NonError',
+      });
+      failure = new StrategyAutomationError(
+        'INTERNAL_ERROR',
+        'The strategy executor encountered an unexpected error. No success was reported; contact support with the reference.',
+        undefined,
+        correlationId,
+      );
+    }
     const statusCode = failure.kind === 'UNAUTHORIZED' ? 403
       : failure.kind === 'INVALID_REQUEST' ? 400
         : failure.kind === 'CONFIGURATION' ? 503
-          : 502;
+          : failure.kind === 'INTERNAL_ERROR' ? 500 : 502;
     response.status(statusCode).json(failure.correlationId
-      ? { error: failure.message, correlationId: failure.correlationId }
+      ? { error: failure.message, kind: failure.kind, correlationId: failure.correlationId }
       : {
         error: failure.message,
         kind: failure.kind,

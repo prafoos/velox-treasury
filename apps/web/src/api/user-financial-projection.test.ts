@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { getAddress } from 'viem';
 
 import { handleUserFinancialStateRequest, readUserFinancialState } from '../../api/user-financial';
@@ -45,6 +46,42 @@ function createClient(overrides: Record<string, unknown> = {}) {
 }
 
 describe('user-financial projection', () => {
+  it('uses Node ESM-resolvable imports throughout the server user-projection module graph', () => {
+    const importsByFile = [
+      {
+        path: '../../api/user-financial.ts',
+        specifiers: ["from './core-state.js'", "from '../server/wallet-auth.js'"],
+      },
+      {
+        path: '../../api/core-state.ts',
+        specifiers: [
+          "from '../src/contracts/usdc.js'",
+          "from '../src/contracts/treasury.js'",
+          "from '../src/types/userFinancialProjection.js'",
+          "from '../server/wallet-auth.js'",
+        ],
+      },
+      {
+        path: '../contracts/treasury.ts',
+        specifiers: [
+          "from './usdc.js'",
+          "from '../../../../packages/domain/src/treasury-addresses.js'",
+        ],
+      },
+      {
+        path: '../../../../apps/api/src/config/arc-mainnet.ts',
+        specifiers: [
+          "from '../../../../packages/domain/src/treasury-addresses.js'",
+        ],
+      },
+    ];
+
+    for (const { path, specifiers } of importsByFile) {
+      const source = readFileSync(new URL(path, import.meta.url), 'utf8');
+      for (const specifier of specifiers) expect(source).toContain(specifier);
+    }
+  });
+
   it('returns only authenticated-user state and public operational status', async () => {
     const client = createClient();
     const state = await readUserFinancialState(client as never, canonicalAccount);

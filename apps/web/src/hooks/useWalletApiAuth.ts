@@ -51,6 +51,16 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
+function responseErrorMessage(
+  step: string,
+  response: Response,
+  payload: Record<string, unknown> | null,
+  fallback: string,
+): string {
+  const detail = typeof payload?.error === 'string' ? payload.error : fallback;
+  return `${step}${response.ok ? '' : ` (HTTP ${response.status})`}: ${detail}`;
+}
+
 export function useWalletApiSession(address: string | undefined, enabled = true) {
   return useQuery<WalletApiSession | null, Error>({
     queryKey: walletApiSessionQueryKey(address),
@@ -72,7 +82,12 @@ export function useWalletApiSession(address: string | undefined, enabled = true)
       const payload = asRecord(await response.json().catch(() => null));
       if (response.status === 401) return null;
       if (!response.ok) {
-        throw new Error(typeof payload?.error === 'string' ? payload.error : 'Wallet authentication is temporarily unavailable.');
+        throw new Error(responseErrorMessage(
+          'Wallet session check failed',
+          response,
+          payload,
+          'Wallet authentication is temporarily unavailable.',
+        ));
       }
       if (typeof payload?.authenticatedWalletAddress !== 'string' || typeof payload.expiresAt !== 'string') return null;
       if (payload.authenticatedWalletAddress.toLowerCase() !== address?.toLowerCase()) return null;
@@ -99,7 +114,12 @@ export async function authenticateWalletApi(
   });
   const challenge = asRecord(await challengeResponse.json().catch(() => null));
   if (!challengeResponse.ok || typeof challenge?.nonce !== 'string' || typeof challenge.message !== 'string') {
-    throw new Error(typeof challenge?.error === 'string' ? challenge.error : 'Wallet authentication is temporarily unavailable.');
+    throw new Error(responseErrorMessage(
+      'Wallet challenge request failed',
+      challengeResponse,
+      challenge,
+      'Wallet authentication is temporarily unavailable.',
+    ));
   }
 
   const signature = await signMessage({ message: challenge.message });
@@ -111,7 +131,12 @@ export async function authenticateWalletApi(
   });
   const verification = asRecord(await verifyResponse.json().catch(() => null));
   if (!verifyResponse.ok || typeof verification?.authenticatedWalletAddress !== 'string') {
-    throw new Error(typeof verification?.error === 'string' ? verification.error : 'Wallet authentication failed.');
+    throw new Error(responseErrorMessage(
+      'Wallet signature verification failed',
+      verifyResponse,
+      verification,
+      'Wallet authentication failed.',
+    ));
   }
   if (verification.authenticatedWalletAddress.toLowerCase() !== address.toLowerCase()) {
     throw new Error('Signed wallet does not match the connected wallet.');
@@ -126,9 +151,12 @@ export async function authenticateWalletApi(
   if (!sessionResponse.ok
     || typeof session?.authenticatedWalletAddress !== 'string'
     || typeof session.expiresAt !== 'string') {
-    throw new Error(typeof session?.error === 'string'
-      ? session.error
-      : 'The authenticated wallet session could not be confirmed.');
+    throw new Error(responseErrorMessage(
+      'Authenticated session confirmation failed',
+      sessionResponse,
+      session,
+      'The authenticated wallet session could not be confirmed.',
+    ));
   }
   if (session.authenticatedWalletAddress.toLowerCase() !== address.toLowerCase()) {
     throw new Error('Authenticated session does not match the connected wallet.');

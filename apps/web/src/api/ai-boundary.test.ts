@@ -6,7 +6,7 @@ import {
   BucketPolicyRegenerationError,
   type BucketPolicyRecommendationStore,
 } from '../../server/adminBucketPolicyRecommendationStore';
-import { classifyAiFailure, handleAdminAiRequest, handleUserAiRequest } from '../../api/ai';
+import { classifyAiFailure, handleAdminAiRequest, handleUserAiRequest } from '../../server/aiRouteHandlers.js';
 
 const sessionSecret = 'ai-boundary-session-secret-at-least-32-bytes';
 const walletAddress = '0x1111111111111111111111111111111111111111' as const;

@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { zeroAddress, zeroHash, type Address } from 'viem';
-import { usePublicClient } from 'wagmi';
 
 import { useWalletStatus } from '../../../hooks/useWalletStatus';
 import { ARC_USDC_CONTRACT_ADDRESS, ARC_MAINNET_CHAIN_ID } from '../../../contracts/usdc';
 import { POLICY_ADMIN_ROLE } from '../../../contracts/treasury';
-import { withVerifiedArcMainnetPublicClient } from '../services/arcMainnetPublicClient';
+import { arcMainnetReadClient, withVerifiedArcMainnetPublicClient } from '../services/arcMainnetPublicClient';
 import {
   STEAKHOUSE_CORE_ADDRESS,
   STEAKHOUSE_PROTOCOL_ID,
@@ -146,6 +145,29 @@ function baseUnit(value: unknown): bigint | null {
   return BigInt(value);
 }
 
+export function strategyAutomationHttpErrorMessage(
+  status: number,
+  payload: unknown,
+  responseBodyReadable = true,
+): string {
+  const responseBody = asRecord(payload);
+  if (!responseBodyReadable || !responseBody || typeof responseBody.error !== 'string') {
+    return `Strategy executor returned HTTP ${status} without a readable JSON error. Check the deployment/function logs; no success was confirmed.`;
+  }
+
+  const kind = typeof responseBody.kind === 'string' ? responseBody.kind : 'UNKNOWN_ERROR';
+  if (kind === 'SIMULATION_FAILED') return `Valuation Sync simulation failed: ${responseBody.error}`;
+  if (kind === 'TRANSACTION_FAILED') return `Valuation Sync transaction failed: ${responseBody.error}`;
+  if (kind === 'INTERNAL_ERROR') {
+    const reference = typeof responseBody.correlationId === 'string'
+      && /^[\da-f-]{36}$/i.test(responseBody.correlationId)
+      ? ` Reference: ${responseBody.correlationId}.`
+      : '';
+    return `Strategy executor encountered an unexpected API error.${reference} ${responseBody.error}`;
+  }
+  return `Valuation Sync failed (${kind}): ${responseBody.error}`;
+}
+
 export function validateExecutionResponse(value: unknown): {
   readonly transactionHash: `0x${string}`;
   readonly blockNumber: bigint;
@@ -177,7 +199,7 @@ export function validateExecutionResponse(value: unknown): {
 
 export function StrategyValuationSyncAdminAction({ isAdmin }: { readonly isAdmin: boolean }) {
   const { address, isConnected, isArcMainnet } = useWalletStatus();
-  const publicClient = usePublicClient({ chainId: ARC_MAINNET_CHAIN_ID });
+  const publicClient = arcMainnetReadClient;
   const queryClient = useQueryClient();
   const [review, setReview] = useState<ValuationSyncPreflight | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -186,10 +208,10 @@ export function StrategyValuationSyncAdminAction({ isAdmin }: { readonly isAdmin
 
   const preflightQuery = useQuery({
     queryKey: ['strategy-valuation-sync-preflight', address?.toLowerCase() ?? null],
-    enabled: Boolean(isAdmin && isConnected && isArcMainnet && address && publicClient),
+    enabled: Boolean(isAdmin && isConnected && isArcMainnet && address),
     retry: false,
     queryFn: async (): Promise<ValuationSyncPreflight> => {
-      if (!publicClient || !address) throw new Error('Arc Mainnet wallet or public client is unavailable.');
+      if (!address) throw new Error('Arc Mainnet wallet is unavailable.');
       return withVerifiedArcMainnetPublicClient(publicClient, async () => {
         const [chainId, blockNumber, coreCode, adapterCode, coreState, corePaused, coreUSDC, coreVault, freshnessBlocks, policyAdmin] =
           await Promise.all([
@@ -324,18 +346,31 @@ export function StrategyValuationSyncAdminAction({ isAdmin }: { readonly isAdmin
         throw new Error('Strategy valuation changed since review. No transaction was requested; review the refreshed values.');
       }
 
-      const response = await fetch('/api/strategy-automation', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { accept: 'application/json', 'content-type': 'application/json' },
-        body: JSON.stringify({ operation: 'sync-valuation' }),
-      });
-      const payload = await response.json().catch(() => null);
+      let response: Response;
+      try {
+        response = await fetch('/api/strategy-automation', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { accept: 'application/json', 'content-type': 'application/json' },
+          body: JSON.stringify({ operation: 'sync-valuation' }),
+        });
+      } catch {
+        throw new Error('Could not reach the strategy executor API. No success was confirmed; check connectivity and retry after verifying status.');
+      }
+
+      let payload: unknown = null;
+      let responseBodyReadable = true;
+      try {
+        payload = await response.json();
+      } catch {
+        responseBodyReadable = false;
+      }
       const responseBody = asRecord(payload);
       if (!response.ok) {
-        throw new Error(typeof responseBody?.error === 'string'
-          ? responseBody.error
-          : 'Valuation Sync was rejected by the strategy executor.');
+        throw new Error(strategyAutomationHttpErrorMessage(response.status, payload, responseBodyReadable));
+      }
+      if (!responseBodyReadable) {
+        throw new Error('Strategy executor returned an unreadable success response. The transaction outcome is unconfirmed; check its status before retrying.');
       }
       const execution = validateExecutionResponse(payload);
       if (!sameAddress(responseBody?.coreAddress, STEAKHOUSE_CORE_ADDRESS)

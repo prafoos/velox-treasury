@@ -1,0 +1,33 @@
+# Keep local environment values out of the deployment source.
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+
+# Local tools, installed dependencies, and generated build/cache output.
+.tools
+**/.tools
+**/node_modules
+**/.pnpm-store
+**/dist
+**/dist-worker
+**/coverage
+**/.cache
+**/.turbo
+**/.vite
+
+# Temporary and local preflight artifacts.
+**/.tmp/
+**/.tmp-*
+**/*.log
+/arc-preflight.js
+/packages/contracts/.tmp-arc-preflight.js
+
+# Stray local command fragments in the repository root.
+/({strategy
+/console.log(await
+/x.toString())))
+/{
+/{console.error(e)
+/{console.error(e.message)
+/{const

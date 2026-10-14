@@ -126,7 +126,7 @@ describe('YieldStrategySection', () => {
     expect(markup).toContain('0.90 USDC');
     expect(markup).toContain('1.00 USDC');
     expect(markup).toContain('Earning position');
-    expect(markup).toContain('User-specific Steakhouse position data cannot currently be retrieved');
+    expect(markup).toContain('Your earning position and allocation eligibility could not be verified');
     expect(markup).not.toContain('1.20 USDC');
     expect(markup).not.toContain('Approved / Enabled');
     expect(markup).not.toContain('Funded');
@@ -255,7 +255,7 @@ describe('YieldStrategySection', () => {
     expect(markup).not.toContain('Not Funded');
     expect(markup).not.toContain('Earning Yield');
     expect(markup).toContain('Earning position');
-    expect(markup).toContain('User-specific Steakhouse position data cannot currently be retrieved');
+    expect(markup).toContain('Action required: Your earning position cannot currently be verified');
     expect(markup).not.toContain('User strategy position');
   });
 

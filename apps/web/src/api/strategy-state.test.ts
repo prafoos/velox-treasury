@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 
 import { ARC_MAINNET_CORE_ADDRESS, ARC_MAINNET_STEAKHOUSE_ADAPTER_ADDRESS } from '../../api/core-state';
 import { handleStrategyStateRequest, readStrategyState, readUserStrategyPosition } from '../../api/strategy-state';
@@ -71,6 +72,13 @@ function createClient(
 }
 
 describe('strategy-state endpoint', () => {
+  it('uses Node ESM-resolvable imports for the Steakhouse position route', () => {
+    const source = readFileSync(new URL('../../api/strategy-state.ts', import.meta.url), 'utf8');
+
+    expect(source).toContain("from './core-state.js'");
+    expect(source).toContain("from '../server/wallet-auth.js'");
+  });
+
   it('does not treat a strategy query parameter as authentication', async () => {
     const response = createResponse();
     const clientFactory = vi.fn(() => createClient() as never);

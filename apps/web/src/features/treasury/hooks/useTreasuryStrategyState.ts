@@ -190,10 +190,10 @@ export function useTreasuryStrategyState(
 
   return {
     strategy: null,
-    position: enabled && !query.isFetching && !query.error ? query.data?.position ?? null : null,
-    strategyStatus: enabled && !query.isFetching && !query.error ? query.data?.strategyStatus ?? null : null,
-    unavailableReason: enabled && !query.isFetching && !query.error ? query.data?.unavailableReason ?? null : null,
-    isLoading: enabled && (query.isLoading || query.isFetching),
+    position: enabled && !query.error ? query.data?.position ?? null : null,
+    strategyStatus: enabled && !query.error ? query.data?.strategyStatus ?? null : null,
+    unavailableReason: enabled && !query.error ? query.data?.unavailableReason ?? null : null,
+    isLoading: enabled && query.isLoading,
     error: enabled ? query.error instanceof Error ? query.error : query.error ? new Error('Strategy state read failed') : null : null,
     refetch: query.refetch,
   };

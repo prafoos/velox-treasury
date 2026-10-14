@@ -5,7 +5,7 @@ import { getAddress, isAddress, zeroAddress, type Address } from 'viem';
 import {
   ARC_MAINNET_CURRENT_LIVE_REFERENCES,
   isRetiredArcMainnetAddress,
-} from '@velox/domain';
+} from '../../../../packages/domain/src/treasury-addresses.js';
 
 loadEnv();
 try {

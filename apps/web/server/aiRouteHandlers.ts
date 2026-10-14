@@ -10,15 +10,15 @@ import {
   respondToWalletAuthError,
   type WalletAuthRequest,
   WalletAuthError,
-} from '../server/wallet-auth';
+} from './wallet-auth.js';
 import {
   BucketPolicyRegenerationError,
   postgresBucketPolicyRecommendationStore,
   type BucketPolicyRecommendationStore,
-} from '../server/adminBucketPolicyRecommendationStore';
-import { createServerClient, readUserProjection, resolveUserAccount, serializeApiData } from './core-state';
-import { readUserStrategyPosition } from './strategy-state';
-import { readAuthorizedAdminProjection, verifyAdminRole } from './admin-projection';
+} from './adminBucketPolicyRecommendationStore.js';
+import { createServerClient, readUserProjection, resolveUserAccount, serializeApiData } from '../api/core-state.js';
+import { readUserStrategyPosition } from '../api/strategy-state.js';
+import { readAuthorizedAdminProjection, verifyAdminRole } from '../api/admin-projection.js';
 
 const webApiDirectory = dirname(fileURLToPath(import.meta.url));
 loadEnv({ path: resolve(webApiDirectory, '../.env') });
@@ -238,7 +238,7 @@ export async function handleAdminAiRequest(
         ?? (async (authorizedProjection: AdminAiInput) => {
           const {
             readVerifiedSteakhouseMarketSnapshot,
-          } = await import('./steakhouse-market-data');
+          } = await import('./steakhouseMarketData.js');
           return await readVerifiedSteakhouseMarketSnapshot(
             authorizedProjection,
             fetch,

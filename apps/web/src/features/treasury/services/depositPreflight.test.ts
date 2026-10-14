@@ -87,6 +87,17 @@ function depositEvent(eventAmount: bigint) {
 }
 
 describe('deposit preflight', () => {
+  it('accepts only verified chain 5042 and the deployed approved Core/USDC pair', async () => {
+    const calls: string[] = [];
+    await expect(verifyDepositPreflight(preflightPorts({
+      getWalletChainId: async () => { calls.push('wallet-chain'); return 5042; },
+      getRpcChainId: async () => { calls.push('relay-chain'); return 5042; },
+      getCoreBytecode: async () => { calls.push('core-bytecode'); return '0x60016000'; },
+      getCoreUsdcAddress: async () => { calls.push('core-usdc'); return ARC_USDC_CONTRACT_ADDRESS; },
+    }))).resolves.toBeUndefined();
+    expect(calls).toEqual(['wallet-chain', 'relay-chain', 'core-bytecode', 'core-usdc']);
+  });
+
   it('rejects a wrong wallet chain before reading further identity or requesting approval', async () => {
     const getRpcChainId = vi.fn(async () => 5042);
     await expect(verifyDepositPreflight(preflightPorts({

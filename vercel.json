@@ -1,8 +1,13 @@
 {
+  "rewrites": [
+    { "source": "/api/ai/user", "destination": "/api/ai-user" },
+    { "source": "/api/ai/admin", "destination": "/api/ai-admin" },
+    { "source": "/ai-assistant", "destination": "/" }
+  ],
   "crons": [
     {
       "path": "/api/strategy-valuation-cron",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }

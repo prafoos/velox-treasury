@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { getAddress } from 'viem';
 import { ARC_MAINNET_RETIRED_ADDRESSES } from '@velox/domain';
 
@@ -16,6 +17,17 @@ import {
 const adminAddress = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd' as const;
 const otherAddress = '0x1111111111111111111111111111111111111111' as const;
 const sessionSecret = 'admin-projection-test-secret-at-least-32-bytes';
+
+describe('admin-projection Node ESM imports', () => {
+  it('uses explicit JavaScript specifiers for its local serverless dependencies', () => {
+    const source = readFileSync(new URL('../../api/admin-projection.ts', import.meta.url), 'utf8');
+
+    expect(source).toContain("from './core-state.js'");
+    expect(source).toContain("from '../src/contracts/treasury.js'");
+    expect(source).toContain("from '../server/wallet-auth.js'");
+    expect(source).toContain("from './strategy-state.js'");
+  });
+});
 const retiredCoreAddress = ARC_MAINNET_RETIRED_ADDRESSES.core;
 process.env.AUTH_SESSION_SECRET = sessionSecret;
 const adminHeaders = { cookie: `velox_session=${createWalletSessionToken(adminAddress, sessionSecret)}` };

@@ -35,26 +35,26 @@ describe('UserEarningPosition', () => {
       position: { status: 'NO_ACTIVE_POSITION' },
       strategyStatus: staleApprovedStrategy,
     });
-    expect(markup).toContain('No active Steakhouse position exists for this wallet.');
+    expect(markup).toContain('No active earning position.');
     expect(markup).toContain('Your verified Steakhouse position value');
     expect(markup).toContain('0.00 USDC');
   });
 
-  it('explains the verified approval state and stale valuation blocker without showing system totals', () => {
+  it('explains the stale valuation pause without exposing technical diagnostics or system totals', () => {
     const markup = renderPosition({
       position: { status: 'NO_ACTIVE_POSITION' },
       strategyStatus: staleApprovedStrategy,
     });
-    expect(markup).toContain('Strategy approved / enabled');
-    expect(markup).toContain('Yes / Yes');
-    expect(markup).toContain('New allocations are blocked because the strategy valuation is stale');
-    expect(markup).toContain('25416075');
-    expect(markup).toContain('25561179');
-    expect(markup).toContain('Allocation attempt history is not recorded here.');
+    expect(markup).toContain('Temporarily paused: The strategy value needs to be refreshed');
+    expect(markup).toContain('Recent allocation activity is not available in this view');
+    expect(markup).not.toContain('STALE');
+    expect(markup).not.toContain('25416075');
+    expect(markup).not.toContain('25561179');
+    expect(markup).not.toContain('Strategy approved / enabled');
     expect(markup).not.toMatch(/total deployed|totalManagedAssets|Core-wide/i);
   });
 
-  it('shows a fresh valuation only from the supplied verified status', () => {
+  it('does not claim the strategy is ready when a valuation is current but no position exists', () => {
     const markup = renderPosition({
       position: { status: 'NO_ACTIVE_POSITION' },
       strategyStatus: {
@@ -65,23 +65,32 @@ describe('UserEarningPosition', () => {
         verifiedAtBlock: 25_565_100n,
       },
     });
-    expect(markup).toContain('Strategy valuation</span><strong>CURRENT</strong>');
+    expect(markup).toContain('A current strategy value is available.');
+    expect(markup).toContain('No active earning position.');
+    expect(markup).not.toMatch(/>Ready</);
     expect(markup).not.toContain('valuation is stale');
   });
 
   it('shows only the authenticated user-specific position value', () => {
     const markup = renderPosition({
       position: { status: 'POSITION_AVAILABLE', currentValue: 1_250_000n },
+      strategyStatus: {
+        ...staleApprovedStrategy,
+        reason: 'POSITION_AVAILABLE',
+        valuationStatus: 'CURRENT',
+      },
     });
     expect(markup).toContain('Your Steakhouse position');
     expect(markup).toContain('1.25 USDC');
+    expect(markup).toContain('Your earning position is verified.');
     expect(markup).not.toMatch(/shares|total deployed|approved|strategy exposure/i);
   });
 
   it('does not translate unavailable data into an empty position', () => {
     const markup = renderPosition({ unavailableReason: 'User strategy getter is unsupported.' });
-    expect(markup).toContain('User-specific Steakhouse position data cannot currently be retrieved');
-    expect(markup).not.toContain('No active Steakhouse position');
+    expect(markup).toContain('Your earning position and allocation eligibility could not be verified');
+    expect(markup).not.toContain('unsupported');
+    expect(markup).not.toContain('No active earning position');
     expect(markup).not.toContain('0.00 USDC');
   });
 
@@ -92,8 +101,8 @@ describe('UserEarningPosition', () => {
 
   it('shows recoverable read errors and provides retry', () => {
     const markup = renderPosition({ error: new Error('RPC request failed.') });
-    expect(markup).toContain('Unable to read your Steakhouse position.');
-    expect(markup).toContain('RPC request failed.');
+    expect(markup).toContain('Your earning position could not be updated.');
+    expect(markup).not.toContain('RPC request failed.');
     expect(markup).toContain('Retry');
   });
 
@@ -101,6 +110,6 @@ describe('UserEarningPosition', () => {
     expect(renderPosition({ authenticationLoading: true })).toContain('Checking wallet sign-in');
     expect(renderPosition({ authenticationError: new Error('Session lookup failed.') }))
       .toContain('Wallet sign-in could not be verified.');
-    expect(renderPosition({ isLoading: true })).toContain('Loading your Steakhouse position');
+    expect(renderPosition({ isLoading: true })).toContain('Updating your earning position');
   });
 });

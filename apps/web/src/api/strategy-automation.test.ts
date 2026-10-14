@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import {
   encodeAbiParameters,
@@ -35,6 +36,35 @@ const transactionHash = `0x${'a'.repeat(64)}` as Hash;
 const allocationHash = `0x${'b'.repeat(64)}` as Hash;
 const depositHash = `0x${'c'.repeat(64)}` as Hash;
 const receiptBlock = 50n;
+
+describe('strategy automation Node ESM imports', () => {
+  it('uses explicit JavaScript specifiers across the API and workspace runtime chain', () => {
+    const files = [
+      {
+        path: '../../api/strategy-automation.ts',
+        specifiers: [
+          "from '../../../packages/domain/src/treasury-addresses.js'",
+          "from '../src/contracts/treasury.js'",
+          "from '../server/wallet-auth.js'",
+          "from '../server/strategyAutomationTriggerStore.js'",
+        ],
+      },
+      {
+        path: '../../api/strategy-valuation-cron.ts',
+        specifiers: ["import('./strategy-automation.js')"],
+      },
+      {
+        path: '../../../../packages/contracts/scripts/arc-mainnet-core-deployment-config.ts',
+        specifiers: ["from './address-safety.js'"],
+      },
+    ];
+
+    for (const { path, specifiers } of files) {
+      const source = readFileSync(new URL(path, import.meta.url), 'utf8');
+      for (const specifier of specifiers) expect(source).toContain(specifier);
+    }
+  });
+});
 
 function snapshot(overrides: Partial<StrategyAutomationSnapshot> = {}): StrategyAutomationSnapshot {
   return {
@@ -325,7 +355,10 @@ describe('strategy Automation execution', () => {
     });
 
     await expect(executeStrategyAutomation(caller, { operation: 'allocate', amount: 200n }, deps))
-      .rejects.toMatchObject({ kind: 'CONFIGURATION' });
+      .rejects.toMatchObject({
+        kind: 'SIMULATION_FAILED',
+        message: expect.stringContaining('No transaction was submitted'),
+      });
     expect(deps.submit).not.toHaveBeenCalled();
   });
 
@@ -410,9 +443,10 @@ describe('strategy Automation execution', () => {
     expect(statusCode).toBe(502);
     expect(responseBody).toMatchObject({
       error: 'Strategy transaction submission failed; no success was reported.',
+      kind: 'TRANSACTION_FAILED',
     });
     expect(responseBody).toHaveProperty('correlationId');
-    expect(Object.keys(responseBody as Record<string, unknown>).sort()).toEqual(['correlationId', 'error']);
+    expect(Object.keys(responseBody as Record<string, unknown>).sort()).toEqual(['correlationId', 'error', 'kind']);
     const correlationId = (responseBody as { correlationId: string }).correlationId;
     expect(correlationId).toMatch(/^[\da-f-]{36}$/i);
     expect(loggedCalls).toEqual([[
@@ -428,6 +462,56 @@ describe('strategy Automation execution', () => {
     expect(deps.simulate).toHaveBeenCalledWith({ operation: 'sync-valuation' });
     expect(deps.submit).toHaveBeenCalledTimes(1);
     expect(deps.waitForReceipt).not.toHaveBeenCalled();
+  });
+
+  it('returns a safe correlation reference for unexpected API exceptions', async () => {
+    const originalSecret = process.env.AUTH_SESSION_SECRET;
+    const originalOrigin = process.env.AUTH_ORIGIN;
+    const sessionSecret = 'test-session-secret-with-at-least-32-bytes';
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    let loggedCalls: unknown[][] = [];
+    let statusCode = 200;
+    let responseBody: unknown;
+    const response = {
+      status(code: number) { statusCode = code; return this; },
+      setHeader() { return this; },
+      json(body: unknown) { responseBody = body; },
+    };
+    process.env.AUTH_SESSION_SECRET = sessionSecret;
+    process.env.AUTH_ORIGIN = 'http://localhost:5173';
+    try {
+      await handleStrategyAutomationRequest({
+        method: 'POST',
+        headers: {
+          origin: 'http://localhost:5173',
+          cookie: `velox_session=${createWalletSessionToken(caller, sessionSecret)}`,
+        },
+        body: { operation: 'sync-valuation' },
+      }, response, () => {
+        throw new Error('private configuration details must not be logged');
+      });
+      loggedCalls = [...errorLog.mock.calls];
+    } finally {
+      errorLog.mockRestore();
+      if (originalSecret === undefined) delete process.env.AUTH_SESSION_SECRET;
+      else process.env.AUTH_SESSION_SECRET = originalSecret;
+      if (originalOrigin === undefined) delete process.env.AUTH_ORIGIN;
+      else process.env.AUTH_ORIGIN = originalOrigin;
+    }
+
+    expect(statusCode).toBe(500);
+    expect(responseBody).toMatchObject({
+      kind: 'INTERNAL_ERROR',
+      error: 'The strategy executor encountered an unexpected error. No success was reported; contact support with the reference.',
+    });
+    const correlationId = (responseBody as { correlationId: string }).correlationId;
+    expect(correlationId).toMatch(/^[\da-f-]{36}$/i);
+    expect(loggedCalls).toEqual([['Strategy automation request failed unexpectedly.', {
+      correlationId,
+      errorType: 'Error',
+    }]]);
+    expect(JSON.stringify(responseBody)).not.toContain('private configuration details');
+    expect(JSON.stringify(loggedCalls)).not.toContain('private configuration details');
   });
 
   it('fails closed if Core, USDC, strategy, or role identity does not match deployment config', async () => {
@@ -581,7 +665,7 @@ describe('scheduled strategy valuation sync', () => {
       caller,
       () => ({ config: { coreAddress: core, steakhouseAdapterAddress: strategy }, dependencies: deps }),
       completingTriggerStore(),
-    )).rejects.toMatchObject({ kind: 'CONFIGURATION' });
+    )).rejects.toMatchObject({ kind: 'SIMULATION_FAILED' });
     expect(deps.submit).not.toHaveBeenCalled();
     expect(deps.getEligibleAllocationAmount).not.toHaveBeenCalled();
   });
@@ -656,7 +740,7 @@ describe('scheduled strategy valuation sync', () => {
       caller,
       () => ({ config: { coreAddress: core, steakhouseAdapterAddress: strategy }, dependencies: deps }),
       completingTriggerStore(),
-    )).rejects.toMatchObject({ kind: 'CONFIGURATION' });
+    )).rejects.toMatchObject({ kind: 'SIMULATION_FAILED' });
     expect(deps.submit).toHaveBeenCalledTimes(1);
     expect(deps.submit).toHaveBeenCalledWith({ operation: 'sync-valuation' });
     expect(deps.waitForReceipt).toHaveBeenCalledTimes(1);
@@ -907,6 +991,100 @@ describe('scheduled strategy valuation sync', () => {
     expect(factory).not.toHaveBeenCalled();
   });
 
+  it('returns a sanitized configuration response when the cron automation module fails to initialize', async () => {
+    const factory = vi.fn(() => ({
+      config: { coreAddress: core, steakhouseAdapterAddress: strategy },
+      dependencies: dependencies(),
+    }));
+    const initializationFailure = Object.assign(new Error('secret=must-not-be-logged'), {
+      name: 'InitializationFailureWithSensitiveDetails',
+    });
+    const automationModuleLoader = vi.fn(async () => {
+      throw initializationFailure;
+    });
+    const logError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    let statusCode = 200;
+    let responseBody: unknown;
+    const response = {
+      status(code: number) { statusCode = code; return this; },
+      setHeader() { return this; },
+      json(body: unknown) { responseBody = body; },
+    };
+
+    try {
+      await handleStrategyValuationCronRequest(
+        { method: 'GET', headers: { authorization: 'Bearer ' + 'a'.repeat(32) } },
+        response,
+        factory,
+        { VERCEL_ENV: 'production', CRON_SECRET: 'a'.repeat(32) },
+        automationModuleLoader,
+      );
+      expect(logError).toHaveBeenCalledWith(
+        'Strategy valuation cron module initialization failed.',
+        expect.objectContaining({
+          errorType: 'Error',
+          correlationId: expect.any(String),
+        }),
+      );
+      expect(JSON.stringify(logError.mock.calls)).not.toContain('must-not-be-logged');
+    } finally {
+      logError.mockRestore();
+    }
+
+    expect(automationModuleLoader).toHaveBeenCalledOnce();
+    expect(factory).not.toHaveBeenCalled();
+    expect(statusCode).toBe(503);
+    expect(responseBody).toMatchObject({
+      error: 'Scheduled valuation sync could not initialize.',
+      kind: 'CONFIGURATION',
+    });
+    expect(responseBody).not.toHaveProperty('details');
+    expect(JSON.stringify(responseBody)).not.toContain('must-not-be-logged');
+  });
+
+  it('handles production Arc configuration errors raised while importing the cron automation module', async () => {
+    vi.resetModules();
+    vi.stubEnv('VERCEL_ENV', 'production');
+    vi.stubEnv('VELOX_TREASURY_CORE_ADDRESS', 'not-an-address');
+    vi.stubEnv('VELIX_TREASURY_CORE_ADDRESS', '');
+    vi.stubEnv('VITE_ARC_MAINNET_CORE_ADDRESS', '');
+    vi.stubEnv('STEAKHOUSE_ADAPTER_ADDRESS', '0x2222222222222222222222222222222222222222');
+    vi.stubEnv('CRON_SECRET', 'a'.repeat(32));
+
+    const logError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    let statusCode = 200;
+    let responseBody: unknown;
+    const response = {
+      status(code: number) { statusCode = code; return this; },
+      setHeader() { return this; },
+      json(body: unknown) { responseBody = body; },
+    };
+
+    try {
+      const { handleStrategyValuationCronRequest: handleRequest } =
+        await import('../../api/strategy-valuation-cron');
+      await handleRequest(
+        { method: 'GET', headers: { authorization: 'Bearer ' + 'a'.repeat(32) } },
+        response,
+      );
+      expect(logError).toHaveBeenCalledWith(
+        'Strategy valuation cron module initialization failed.',
+        expect.objectContaining({ errorType: 'Error', correlationId: expect.any(String) }),
+      );
+    } finally {
+      logError.mockRestore();
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
+
+    expect(statusCode).toBe(503);
+    expect(responseBody).toMatchObject({
+      error: 'Scheduled valuation sync could not initialize.',
+      kind: 'CONFIGURATION',
+    });
+    expect(JSON.stringify(responseBody)).not.toContain('not-an-address');
+  });
+
   it('does not present a failed sync simulation as successful or submit it', async () => {
     const deps = dependencies(snapshot({ valuationBlock: 1n, freshnessBlocks: 2n }), undefined, {
       simulate: vi.fn(async () => { throw new Error('Core valuation read rejected.'); }),
@@ -930,10 +1108,10 @@ describe('scheduled strategy valuation sync', () => {
     );
 
     expect(factory).toHaveBeenCalledOnce();
-    expect(statusCode).toBe(503);
+    expect(statusCode).toBe(502);
     expect(responseBody).toMatchObject({
-      kind: 'CONFIGURATION',
-      error: 'Core simulation rejected the strategy operation under current policy, strategy, exposure, valuation, or liquidity checks; no transaction was submitted.',
+      kind: 'SIMULATION_FAILED',
+      error: expect.stringContaining('No transaction was submitted'),
     });
     expect(deps.simulate).toHaveBeenCalledWith({ operation: 'sync-valuation' });
     expect(deps.submit).not.toHaveBeenCalled();
@@ -969,12 +1147,17 @@ describe('deposit trigger freshness', () => {
     'event Deposit(address indexed user, uint256 amount, uint256 userBalance, uint256 totalLiabilities)',
   ]);
 
-  function depositClient(receiptBlockNumber: bigint, latest: bigint = latestBlock) {
+  function depositClient(
+    receiptBlockNumber: bigint,
+    latest: bigint = latestBlock,
+    eventUser: Address = caller,
+    eventAmount: bigint = depositAmount,
+  ) {
     const input = encodeFunctionData({ abi: depositAbi, functionName: 'deposit', args: [depositAmount] });
-    const topics = encodeEventTopics({ abi: depositAbi, eventName: 'Deposit', args: { user: caller } });
+    const topics = encodeEventTopics({ abi: depositAbi, eventName: 'Deposit', args: { user: eventUser } });
     const data = encodeAbiParameters(
       [{ type: 'uint256' }, { type: 'uint256' }, { type: 'uint256' }],
-      [depositAmount, depositAmount, depositAmount],
+      [eventAmount, eventAmount, eventAmount],
     );
     return {
       getTransaction: vi.fn(async () => ({ to: core, from: caller, input })),
@@ -1023,6 +1206,12 @@ describe('deposit trigger freshness', () => {
     const wrongCaller = '0x0000000000000000000000000000000000000009' as Address;
     expect(await verifyConfirmedDepositTransaction(depositClient(latestBlock - 1n), core, depositHash, wrongCaller)).toBe(false);
     expect(await verifyConfirmedDepositTransaction(depositClient(latestBlock - 1n), strategy, depositHash, caller)).toBe(false);
+    expect(await verifyConfirmedDepositTransaction(
+      depositClient(latestBlock - 1n, latestBlock, caller, depositAmount + 1n),
+      core,
+      depositHash,
+      caller,
+    )).toBe(false);
   });
 
   it('rejects a stale deposit before any claim, valuation sync or allocation', async () => {

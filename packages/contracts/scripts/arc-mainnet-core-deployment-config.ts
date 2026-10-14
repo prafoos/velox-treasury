@@ -1,6 +1,8 @@
 import { isAddress, ZeroAddress } from 'ethers';
-import { isRetiredArcMainnetAddress, RETIRED_TREASURY_ADDRESS } from './address-safety';
-export { RETIRED_TREASURY_ADDRESS } from './address-safety';
+import { isRetiredArcMainnetAddress, RETIRED_TREASURY_ADDRESS } from './address-safety.js';
+import { ARC_MAINNET_CORE_ROLE_HOLDERS } from '../../../packages/domain/src/treasury-addresses.js';
+export { RETIRED_TREASURY_ADDRESS } from './address-safety.js';
+export { ARC_MAINNET_CORE_ROLE_HOLDERS };
 
 export const ARC_MAINNET_CORE_NETWORK = 'arcMainnet' as const;
 export const ARC_MAINNET_CORE_CHAIN_ID = 5_042n;
@@ -23,13 +25,6 @@ export const ARC_MAINNET_CORE_INITIAL_POLICY_ENV = {
   yieldStrategyBufferBps: 'ARC_MAINNET_CORE_BUCKET_YIELD_STRATEGY_BUFFER_BPS',
   sweepLiquidityBufferBps: 'ARC_MAINNET_CORE_BUCKET_SWEEP_LIQUIDITY_BUFFER_BPS',
   automationAgentPoolBps: 'ARC_MAINNET_CORE_BUCKET_AUTOMATION_AGENT_POOL_BPS',
-} as const;
-export const ARC_MAINNET_CORE_ROLE_HOLDERS = {
-  governance: '0x37ab81b0b9C326F91426E57aa2E2D9273EF16F06',
-  policyAdmin: '0xeE55Baf61e6727FC48b141a10f0AB7A14aE0E9Df',
-  timelockExecutor: '0x7bb9655B227E6d47f8B929a0bd6261fa4063df4c',
-  automationExecutor: '0x0ebad7ecda409d72aacc529efd46077d1cf012be',
-  emergency: '0x616647825Fc3cf69E5e7c5E474fF49a71FFB2596',
 } as const;
 const MAX_UINT256 = (1n << 256n) - 1n;
 

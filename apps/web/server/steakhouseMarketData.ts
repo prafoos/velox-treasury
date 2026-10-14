@@ -5,7 +5,7 @@ import {
   ARC_MAINNET_EXECUTION_CONFIG,
   ARC_MAINNET_STEAKHOUSE_VAULT_ADDRESS,
 } from '../../api/src/config/arc-mainnet.js';
-import { ARC_MAINNET_CHAIN_ID, type CoreStateClient } from './core-state';
+import { ARC_MAINNET_CHAIN_ID, type CoreStateClient } from '../api/core-state.js';
 
 export const ARC_MAINNET_MORPHO_ASSET = ARC_MAINNET_EXECUTION_CONFIG.usdcAddress;
 export const ARC_MAINNET_STEAKHOUSE_VAULT = ARC_MAINNET_STEAKHOUSE_VAULT_ADDRESS;

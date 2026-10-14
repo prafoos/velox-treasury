@@ -1,10 +1,10 @@
 import type { Address } from 'viem';
-import { createServerClient, readUserProjection, resolveUserAccount, serializeApiData } from './core-state';
+import { createServerClient, readUserProjection, resolveUserAccount, serializeApiData } from './core-state.js';
 import {
   requireAuthenticatedWallet,
   respondToWalletAuthError,
   type WalletAuthRequest,
-} from '../server/wallet-auth';
+} from '../server/wallet-auth.js';
 
 export interface UserFinancialStateRequest extends WalletAuthRequest {}
 

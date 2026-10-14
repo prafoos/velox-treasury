@@ -1,10 +1,14 @@
-import { timingSafeEqual } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 
-import {
-  runScheduledStrategyValuationSync,
-  StrategyAutomationError,
-  type ScheduledStrategyValuationSync,
-} from './strategy-automation';
+type StrategyAutomationModule = typeof import('./strategy-automation.js');
+type ScheduledStrategyValuationSync = import('./strategy-automation.js').ScheduledStrategyValuationSync;
+type ScheduledDependenciesFactory = NonNullable<
+  Parameters<StrategyAutomationModule['runScheduledStrategyValuationSync']>[0]
+>;
+type CronAutomationModule = Pick<
+  StrategyAutomationModule,
+  'runScheduledStrategyValuationSync' | 'StrategyAutomationError'
+>;
 
 interface ScheduledRequest {
   readonly method?: string;
@@ -17,7 +21,9 @@ interface ScheduledResponse {
   json(body: unknown): void;
 }
 
-type ScheduledDependenciesFactory = NonNullable<Parameters<typeof runScheduledStrategyValuationSync>[0]>;
+type CronAutomationModuleLoader = () => Promise<CronAutomationModule>;
+
+const loadCronAutomationModule: CronAutomationModuleLoader = () => import('./strategy-automation.js');
 
 function isAuthorizedCronRequest(request: ScheduledRequest, secret: string): boolean {
   const header = request.headers?.authorization;
@@ -51,6 +57,7 @@ export async function handleStrategyValuationCronRequest(
   response: ScheduledResponse,
   dependenciesFactory?: ScheduledDependenciesFactory,
   environment: NodeJS.ProcessEnv = process.env,
+  automationModuleLoader: CronAutomationModuleLoader = loadCronAutomationModule,
 ): Promise<void> {
   response.setHeader('Content-Type', 'application/json');
   response.setHeader('Cache-Control', 'no-store');
@@ -73,15 +80,33 @@ export async function handleStrategyValuationCronRequest(
     return;
   }
 
+  let automationModule: CronAutomationModule;
+  try {
+    automationModule = await automationModuleLoader();
+  } catch (error) {
+    const correlationId = randomUUID();
+    const errorType = error instanceof Error ? 'Error' : 'NonError';
+    console.error('Strategy valuation cron module initialization failed.', { correlationId, errorType });
+    response.status(503).json({
+      error: 'Scheduled valuation sync could not initialize.',
+      kind: 'CONFIGURATION',
+      correlationId,
+    });
+    return;
+  }
+
   try {
     const result = dependenciesFactory
-      ? await runScheduledStrategyValuationSync(dependenciesFactory)
-      : await runScheduledStrategyValuationSync();
+      ? await automationModule.runScheduledStrategyValuationSync(dependenciesFactory)
+      : await automationModule.runScheduledStrategyValuationSync();
     response.status(200).json(serializeResult(result));
   } catch (error) {
-    const failure = error instanceof StrategyAutomationError
+    const failure = error instanceof automationModule.StrategyAutomationError
       ? error
-      : new StrategyAutomationError('CONFIGURATION', 'Scheduled valuation sync could not verify its configuration or Core state.');
+      : new automationModule.StrategyAutomationError(
+        'CONFIGURATION',
+        'Scheduled valuation sync could not verify its configuration or Core state.',
+      );
     const statusCode = failure.kind === 'UNAUTHORIZED' ? 403
       : failure.kind === 'CONFIGURATION' ? 503 : 502;
     response.status(statusCode).json({

@@ -47,6 +47,7 @@ vi.mock('../../../hooks/useWalletStatus', () => ({
 
 import {
   StrategyValuationSyncAdminAction,
+  strategyAutomationHttpErrorMessage,
   validateExecutionResponse,
 } from './StrategyValuationSyncAdminAction';
 
@@ -67,6 +68,33 @@ describe('StrategyValuationSyncAdminAction', () => {
     expect(markup).toContain('Connect an authenticated Policy Admin wallet on Arc Mainnet');
     expect(markup).not.toContain('Review Valuation Sync');
     mocks.isConnected = true;
+  });
+
+  it('distinguishes structured executor failures from unreadable HTTP responses', () => {
+    expect(strategyAutomationHttpErrorMessage(503, {
+      kind: 'CONFIGURATION',
+      error: 'The configured Automation Executor does not match the signer.',
+    })).toBe('Valuation Sync failed (CONFIGURATION): The configured Automation Executor does not match the signer.');
+
+    expect(strategyAutomationHttpErrorMessage(502, null, false))
+      .toContain('HTTP 502 without a readable JSON error');
+    expect(strategyAutomationHttpErrorMessage(502, { message: 'upstream html' }))
+      .toContain('HTTP 502 without a readable JSON error');
+
+    expect(strategyAutomationHttpErrorMessage(502, {
+      kind: 'INTERNAL_ERROR',
+      error: 'The strategy executor encountered an unexpected error.',
+      correlationId: '123e4567-e89b-12d3-a456-426614174000',
+    })).toContain('Reference: 123e4567-e89b-12d3-a456-426614174000');
+
+    expect(strategyAutomationHttpErrorMessage(502, {
+      kind: 'SIMULATION_FAILED',
+      error: 'Core rejected simulation. No transaction was submitted.',
+    })).toContain('Valuation Sync simulation failed');
+    expect(strategyAutomationHttpErrorMessage(502, {
+      kind: 'TRANSACTION_FAILED',
+      error: 'The Core transaction reverted on-chain.',
+    })).toContain('Valuation Sync transaction failed');
   });
 
   it('accepts only a confirmed sync receipt with current valuation metadata', () => {

@@ -1,8 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { withVerifiedArcMainnetPublicClient } from './arcMainnetPublicClient';
+import { arcMainnetReadClient, withVerifiedArcMainnetPublicClient } from './arcMainnetPublicClient';
 
 describe('withVerifiedArcMainnetPublicClient', () => {
+  it('uses the same-origin read-only relay for Arc Mainnet RPC requests', () => {
+    expect(arcMainnetReadClient.chain?.id).toBe(5042);
+    expect(arcMainnetReadClient.transport.url).toBe('/api/chain-read');
+  });
+
   it('trusts an authoritative read only after the actual RPC reports chain 5042', async () => {
     const read = vi.fn(async () => 0n);
     await expect(withVerifiedArcMainnetPublicClient({ getChainId: async () => 5042 }, read)).resolves.toBe(0n);

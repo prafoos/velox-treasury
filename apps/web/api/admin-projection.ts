@@ -6,23 +6,23 @@ import {
   readOptionalContract,
   serializeApiData,
   type CoreStateClient,
-} from './core-state';
+} from './core-state.js';
 import {
   ARC_MAINNET_STEAKHOUSE_ADAPTER_ADDRESS,
   AUTOMATION_ROLE,
   EMERGENCY_ROLE,
   POLICY_ADMIN_ROLE,
   TIMELOCK_EXECUTOR_ROLE,
-} from '../src/contracts/treasury';
+} from '../src/contracts/treasury.js';
 import {
   WalletAuthConfigurationError,
   WalletAuthError,
   requireAuthenticatedWallet,
   respondToWalletAuthError,
   type WalletAuthRequest,
-} from '../server/wallet-auth';
+} from '../server/wallet-auth.js';
 import type { Address } from 'viem';
-import { readStrategyState } from './strategy-state';
+import { readStrategyState } from './strategy-state.js';
 
 type RawExposureCap = readonly [absoluteCap: bigint, relativeCapBps: number, approved: boolean, enabled: boolean];
 
@@ -79,6 +79,31 @@ type BucketPolicyFields = {
 
 function hasNumericZeroSemantics(unit: AdminProjectionUnit): boolean {
   return ['USDC_BASE_UNITS', 'SHARES', 'BPS', 'BLOCK', 'COUNT'].includes(unit);
+}
+
+function calculateTotalPnl(
+  realizedYield: bigint | number,
+  realizedLoss: bigint | number,
+  unrealizedYield: bigint | number,
+  unrealizedLoss: bigint | number,
+): bigint | number {
+  if (
+    typeof realizedYield === 'bigint'
+    && typeof realizedLoss === 'bigint'
+    && typeof unrealizedYield === 'bigint'
+    && typeof unrealizedLoss === 'bigint'
+  ) {
+    return (realizedYield - realizedLoss) + (unrealizedYield - unrealizedLoss);
+  }
+  if (
+    typeof realizedYield === 'number'
+    && typeof realizedLoss === 'number'
+    && typeof unrealizedYield === 'number'
+    && typeof unrealizedLoss === 'number'
+  ) {
+    return (realizedYield - realizedLoss) + (unrealizedYield - unrealizedLoss);
+  }
+  throw new TypeError('Strategy P&L amounts must use a consistent numeric type.');
 }
 
 function fromCore<T>(result: T | { unavailable: true }, unit: AdminProjectionUnit = 'NONE'): AdminProjectionValue<T> {
@@ -273,8 +298,12 @@ export async function readAuthorizedAdminProjection(client: CoreStateClient, acc
       unrealizedYield: derivedValue(strategyState.unrealizedYield, 'USDC_BASE_UNITS'),
       unrealizedLoss: derivedValue(strategyState.unrealizedLoss, 'USDC_BASE_UNITS'),
       totalPnl: derivedValue(
-        (strategyState.realizedYield - strategyState.realizedLoss)
-          + (strategyState.unrealizedYield - strategyState.unrealizedLoss),
+        calculateTotalPnl(
+          strategyState.realizedYield,
+          strategyState.realizedLoss,
+          strategyState.unrealizedYield,
+          strategyState.unrealizedLoss,
+        ),
         'USDC_BASE_UNITS',
       ),
       feesAccrued: strategyValue(strategyState.feesAccrued, 'USDC_BASE_UNITS'),

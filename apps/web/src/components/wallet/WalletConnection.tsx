@@ -80,7 +80,7 @@ export function WalletConnection() {
       attemptedAddress.current = null;
       return;
     }
-    if (apiSession.isLoading || apiSession.isFetching || apiSession.error) return;
+    if (apiSession.isLoading || apiSession.isFetching) return;
     if (isApiAuthenticated) {
       attemptedAddress.current = null;
       return;
@@ -89,7 +89,6 @@ export function WalletConnection() {
     void authenticate();
   }, [
     address,
-    apiSession.error,
     apiSession.isFetching,
     apiSession.isLoading,
     authenticate,
@@ -129,6 +128,15 @@ export function WalletConnection() {
         >
           {authProgress.data?.status === 'pending' || isSigning || isAuthenticating
             ? <span className="vx-stage-pill">Confirm wallet sign-in</span>
+            : authProgress.data?.status === 'failed' || authProgress.data?.status === 'rejected'
+              ? (
+                <>
+                  <span>{authProgress.data.message ?? 'Wallet sign-in failed. No authenticated session was created.'}</span>
+                  <button type="button" className="vx-btn vx-btn-outline" onClick={retryAuthentication}>
+                    Retry wallet sign-in
+                  </button>
+                </>
+              )
             : apiSession.error
               ? (
                 <>
@@ -138,15 +146,6 @@ export function WalletConnection() {
                   </button>
                 </>
               )
-              : authProgress.data?.status === 'failed' || authProgress.data?.status === 'rejected'
-                ? (
-                  <>
-                    <span>{authProgress.data.message ?? 'Wallet sign-in failed. No authenticated session was created.'}</span>
-                    <button type="button" className="vx-btn vx-btn-outline" onClick={retryAuthentication}>
-                      Retry wallet sign-in
-                    </button>
-                  </>
-                )
             : (
               <span>
                 Your Treasury data will appear after wallet sign-in is completed.

@@ -24,46 +24,62 @@ export function UserEarningPosition({
   authenticationError,
   onRetry,
 }: UserEarningPositionProps) {
+  const statusMessage = strategyStatus?.reason === 'CORE_PAUSED'
+    ? 'Temporarily paused: Treasury operations are paused, so new allocations cannot proceed.'
+    : strategyStatus?.reason === 'STRATEGY_NOT_APPROVED'
+      ? 'Temporarily paused: This strategy is not currently available for new allocations.'
+      : strategyStatus?.reason === 'STRATEGY_DISABLED'
+        ? 'Temporarily paused: This strategy is currently disabled for new allocations.'
+        : strategyStatus?.reason === 'VALUATION_STALE'
+          ? 'Temporarily paused: The strategy value needs to be refreshed before new allocations can be considered.'
+          : strategyStatus?.reason === 'VALUATION_UNAVAILABLE'
+            ? 'Temporarily paused: A current strategy value is unavailable, so allocation eligibility cannot be checked.'
+            : strategyStatus?.reason === 'VALUATION_IMPAIRED'
+              ? 'Temporarily paused: The strategy value needs review before new allocations can be considered.'
+              : strategyStatus?.reason === 'APPROVED_ENABLED_NO_POSITION'
+                ? 'A current strategy value is available. This does not confirm that an allocation is ready to proceed.'
+                : strategyStatus?.reason === 'UNKNOWN'
+                  ? 'Action required: Strategy eligibility could not be verified.'
+                  : strategyStatus?.reason === 'POSITION_AVAILABLE'
+                    ? 'Your earning position is verified.'
+                    : null;
+  const isStrategyPaused = strategyStatus !== null && strategyStatus !== undefined && [
+    'CORE_PAUSED',
+    'STRATEGY_NOT_APPROVED',
+    'STRATEGY_DISABLED',
+    'VALUATION_UNAVAILABLE',
+    'VALUATION_STALE',
+    'VALUATION_IMPAIRED',
+  ].includes(strategyStatus.reason);
   let content;
   if (authenticationLoading) {
     content = <p className="vx-text-muted" role="status">Checking wallet sign-in…</p>;
   } else if (authenticationError) {
-    content = <p className="vx-step-callout warning" role="alert">Wallet sign-in could not be verified. {authenticationError.message}</p>;
+    content = <p className="vx-step-callout warning" role="alert">Wallet sign-in could not be verified. Please reconnect your wallet and try again.</p>;
   } else if (!isAuthenticated) {
     content = <p className="vx-text-muted" role="status">Sign in to view your Steakhouse position.</p>;
   } else if (isLoading) {
-    content = <p className="vx-text-muted" role="status">Loading your Steakhouse position…</p>;
+    content = <p className="vx-text-muted" role="status">Updating your earning position…</p>;
   } else if (error) {
     content = (
       <div className="vx-step-callout warning" role="alert">
-        <p>Unable to read your Steakhouse position. {error.message}</p>
+        <p>Your earning position could not be updated. Please try again.</p>
         <button type="button" className="vx-btn vx-btn-outline" onClick={onRetry}>Retry</button>
       </div>
     );
   } else if (unavailableReason) {
-    content = <p className="vx-text-muted" role="status">User-specific Steakhouse position data cannot currently be retrieved: {unavailableReason}</p>;
+    content = (
+      <p className="vx-step-callout warning" role="status">
+        Action required: Your earning position and allocation eligibility could not be verified.
+      </p>
+    );
   } else if (position?.status === 'NO_ACTIVE_POSITION' || position?.status === 'POSITION_AVAILABLE') {
-    const reasonText = strategyStatus?.reason === 'CORE_PAUSED'
-      ? 'New strategy operations are blocked while the Core is paused.'
-      : strategyStatus?.reason === 'STRATEGY_NOT_APPROVED'
-        ? 'The strategy is not approved.'
-        : strategyStatus?.reason === 'STRATEGY_DISABLED'
-          ? 'The strategy is approved but disabled.'
-          : strategyStatus?.reason === 'VALUATION_STALE'
-            ? `New allocations are blocked because the strategy valuation is stale (last valuation: Core block ${strategyStatus.valuationBlock.toString()}; verified at block ${strategyStatus.verifiedAtBlock.toString()}).`
-            : strategyStatus?.reason === 'VALUATION_UNAVAILABLE'
-              ? 'A current strategy valuation is unavailable, so allocation eligibility cannot be verified.'
-              : strategyStatus?.reason === 'VALUATION_IMPAIRED'
-                ? 'The Core reports an impaired strategy valuation.'
-                : strategyStatus?.reason === 'APPROVED_ENABLED_NO_POSITION'
-                  ? 'The strategy is approved and enabled, but no funds are currently recorded as allocated for this wallet.'
-                  : null;
     content = (
       <>
         {position.status === 'NO_ACTIVE_POSITION'
           ? (
             <>
-              <p className="vx-text-muted" role="status">No active Steakhouse position exists for this wallet.</p>
+              <p className="vx-text-muted" role="status">No active earning position.</p>
               {strategyStatus && (
                 <div className="vx-metric-row">
                   <span>Your verified Steakhouse position value</span>
@@ -80,24 +96,25 @@ export function UserEarningPosition({
               </div>
             </div>
           )}
-        {strategyStatus && (
-          <div className="vx-yield-metrics-list">
-            <div className="vx-metric-row">
-              <span>Strategy approved / enabled</span>
-              <strong>{strategyStatus.approved ? 'Yes' : 'No'} / {strategyStatus.enabled ? 'Yes' : 'No'}</strong>
-            </div>
-            <div className="vx-metric-row">
-              <span>Strategy valuation</span>
-              <strong>{strategyStatus.valuationStatus}</strong>
-            </div>
-          </div>
+        {statusMessage && (
+          <p className={isStrategyPaused || strategyStatus?.reason === 'UNKNOWN'
+            ? 'vx-step-callout warning'
+            : 'vx-text-muted'} role="status">
+            {statusMessage}
+          </p>
         )}
-        {reasonText && <p className="vx-text-muted" role="status">{reasonText}</p>}
-        {strategyStatus && <p className="vx-text-muted">Strategy status verified at Core block {strategyStatus.verifiedAtBlock.toString()}. Allocation attempt history is not recorded here.</p>}
+        {!strategyStatus && (
+          <p className="vx-step-callout warning" role="status">
+            Action required: Strategy eligibility could not be verified.
+          </p>
+        )}
+        <p className="vx-text-muted">
+          Recent allocation activity is not available in this view; this does not confirm that no attempts occurred.
+        </p>
       </>
     );
   } else {
-    content = <p className="vx-text-muted" role="status">User-specific Steakhouse position data cannot currently be retrieved.</p>;
+    content = <p className="vx-step-callout warning" role="status">Action required: Your earning position cannot currently be verified.</p>;
   }
 
   return (

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { ARC_USDC_CONTRACT_ADDRESS, ARC_USDC_DECIMALS } from '../../../contracts/usdc';
+import { isSafeTreasuryActionDiagnostic } from '../services/treasuryActionDiagnostics';
 
 interface WithdrawActionModalProps {
   readonly isOpen: boolean;
@@ -23,7 +24,11 @@ export function WithdrawActionModal({ isOpen, onClose, canWithdraw, isSubmitting
     try { setError(null); await onWithdraw(targetRecipient, amount); setRecipient(walletAddress ?? ''); setAmount(''); } catch (cause) { setError(cause instanceof Error ? cause.message : 'Treasury withdrawal failed or was rejected.'); }
   };
   if (!isOpen) return null;
-  const visibleError = error ? canViewAdmin ? error : 'Your withdrawal could not be completed. Please try again.' : null;
+  const visibleError = error
+    ? canViewAdmin || isSafeTreasuryActionDiagnostic(error)
+      ? error
+      : 'Your withdrawal could not be completed. Please try again.'
+    : null;
   const visibleStatus = status
     ? canViewAdmin
       ? status

@@ -11,6 +11,7 @@ const apiRoutes = new Map([
   ['/api/admin-projection', resolve(__dirname, 'api/admin-projection.ts')],
   ['/api/ai/user', resolve(__dirname, 'api/ai-user.ts')],
   ['/api/ai/admin', resolve(__dirname, 'api/ai-admin.ts')],
+  ['/api/chain-read', resolve(__dirname, 'api/chain-read.ts')],
   ['/api/core-state', resolve(__dirname, 'api/core-state.ts')],
   ['/api/strategy-state', resolve(__dirname, 'api/strategy-state.ts')],
   ['/api/strategy-automation', strategyAutomationModulePath],

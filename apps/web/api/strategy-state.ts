@@ -9,12 +9,12 @@ import {
   coreStateAbi,
   resolveUserAccount,
   type CoreStateClient,
-} from './core-state';
+} from './core-state.js';
 import {
   requireAuthenticatedWallet,
   respondToWalletAuthError,
   type WalletAuthRequest,
-} from '../server/wallet-auth';
+} from '../server/wallet-auth.js';
 
 const strategyStateAbi = [
   {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { parseEventLogs, zeroAddress, zeroHash, type Hex } from 'viem';
-import { usePublicClient, useWriteContract } from 'wagmi';
+import { useWriteContract } from 'wagmi';
 
 import { useWalletStatus } from '../../../hooks/useWalletStatus';
 import {
@@ -9,7 +9,7 @@ import {
   veloxTreasuryAbi,
 } from '../../../contracts/treasury';
 import { ARC_MAINNET_CHAIN_ID, ARC_USDC_CONTRACT_ADDRESS } from '../../../contracts/usdc';
-import { withVerifiedArcMainnetPublicClient } from '../services/arcMainnetPublicClient';
+import { arcMainnetReadClient, withVerifiedArcMainnetPublicClient } from '../services/arcMainnetPublicClient';
 import {
   APPROVAL_ABSOLUTE_CAP,
   APPROVAL_RELATIVE_CAP_BPS,
@@ -35,7 +35,7 @@ const adapterAbi = [
 
 export function StrategyApprovalAdminActions() {
   const { address, isConnected, isArcMainnet } = useWalletStatus();
-  const publicClient = usePublicClient({ chainId: ARC_MAINNET_CHAIN_ID });
+  const publicClient = arcMainnetReadClient;
   const { writeContractAsync, isPending } = useWriteContract();
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -44,10 +44,10 @@ export function StrategyApprovalAdminActions() {
 
   const preflightQuery = useQuery({
     queryKey: ['steakhouse-strategy-approval-preflight', address?.toLowerCase() ?? null],
-    enabled: Boolean(isConnected && isArcMainnet && address && publicClient),
+    enabled: Boolean(isConnected && isArcMainnet && address),
     retry: false,
     queryFn: async (): Promise<StrategyApprovalPreflight> => {
-      if (!publicClient || !address) throw new Error('Arc Mainnet wallet or public client is unavailable.');
+      if (!address) throw new Error('Arc Mainnet wallet is unavailable.');
       const [chainId, policyAdminRole, adapterCode, strategy] = await withVerifiedArcMainnetPublicClient(publicClient, () => Promise.all([
         publicClient.getChainId(),
         publicClient.readContract({
@@ -129,7 +129,7 @@ export function StrategyApprovalAdminActions() {
   const canSchedule = preflightQuery.data !== undefined && !strategyAlreadyActive && blockers.length === 0;
 
   const confirmSchedule = async () => {
-    if (!publicClient || !address) return;
+    if (!address) return;
     setSubmitting(true);
     setError(null);
     setStatus(null);

@@ -6,7 +6,7 @@ import {
   type WalletAuthDependencies,
   type WalletAuthRequest,
   type WalletAuthResponse,
-} from '../../server/wallet-auth';
+} from '../../server/wallet-auth.js';
 
 export async function handleWalletAuthChallengeRequest(
   request: WalletAuthRequest,

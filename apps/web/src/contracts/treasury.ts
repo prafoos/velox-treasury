@@ -1,7 +1,9 @@
 import { getAddress, isAddress, keccak256, toBytes, zeroAddress, type Address } from 'viem';
-import { ARC_MAINNET_CURRENT_LIVE_REFERENCES, isRetiredArcMainnetAddress } from '@velox/domain';
+import { ARC_MAINNET_CURRENT_LIVE_REFERENCES, isRetiredArcMainnetAddress } from '../../../../packages/domain/src/treasury-addresses.js';
 
-import { ARC_MAINNET_CHAIN_ID } from './usdc';
+import { ARC_MAINNET_CHAIN_ID } from './usdc.js';
+
+const viteEnvironment = import.meta.env ?? {};
 
 /** Project-approved Arc Mainnet Core; runtime configuration must explicitly select it. */
 export const APPROVED_ARC_MAINNET_CORE_ADDRESS: Address =
@@ -49,14 +51,14 @@ export function resolveConfiguredMainnetCoreAddress(
 }
 
 export const ARC_MAINNET_TREASURY_ADDRESS: Address | null = resolveConfiguredMainnetCoreAddress(
-  import.meta.env.VITE_ARC_MAINNET_CORE_ADDRESS,
-  import.meta.env.PROD,
+  viteEnvironment.VITE_ARC_MAINNET_CORE_ADDRESS,
+  viteEnvironment.PROD,
 );
 export const ARC_MAINNET_STEAKHOUSE_ADAPTER_ADDRESS: Address | null = resolveConfiguredMainnetAddress(
-  import.meta.env.VITE_ARC_MAINNET_STEAKHOUSE_ADAPTER_ADDRESS,
+  viteEnvironment.VITE_ARC_MAINNET_STEAKHOUSE_ADAPTER_ADDRESS,
   CURRENT_LIVE_ARC_MAINNET_ADAPTER_REFERENCE,
   'VITE_ARC_MAINNET_STEAKHOUSE_ADAPTER_ADDRESS',
-  import.meta.env.PROD,
+  viteEnvironment.PROD,
 );
 
 export const POLICY_ADMIN_ROLE = keccak256(toBytes('POLICY_ADMIN_ROLE'));

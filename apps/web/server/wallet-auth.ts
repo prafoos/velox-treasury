@@ -76,7 +76,7 @@ function canonicalAddress(value: unknown): Address {
 
 function validateSessionSecret(secret: string): void {
   if (Buffer.byteLength(secret, 'utf8') < 32) {
-    throw new WalletAuthConfigurationError('Wallet session authentication is not configured.');
+    throw new WalletAuthConfigurationError('AUTH_SESSION_SECRET must be configured with at least 32 bytes.');
   }
 }
 
@@ -85,11 +85,11 @@ function validateOrigin(origin: string): string {
   try {
     parsed = new URL(origin);
   } catch {
-    throw new WalletAuthConfigurationError('Wallet authentication origin is not configured.');
+    throw new WalletAuthConfigurationError('AUTH_ORIGIN must be a valid HTTPS origin (localhost HTTP is allowed for development).');
   }
   const isLocalHttp = parsed.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(parsed.hostname);
   if (parsed.origin !== origin || (parsed.protocol !== 'https:' && !isLocalHttp)) {
-    throw new WalletAuthConfigurationError('Wallet authentication origin is not configured.');
+    throw new WalletAuthConfigurationError('AUTH_ORIGIN must be a valid HTTPS origin (localhost HTTP is allowed for development).');
   }
   return parsed.origin;
 }
@@ -203,13 +203,13 @@ export function requireAuthenticatedWallet(
 
 function authOriginFromEnvironment(): string {
   const origin = process.env.AUTH_ORIGIN;
-  if (!origin) throw new WalletAuthConfigurationError('Wallet authentication origin is not configured.');
+  if (!origin) throw new WalletAuthConfigurationError('AUTH_ORIGIN is not configured.');
   return validateOrigin(origin);
 }
 
 function sessionSecretFromEnvironment(): string {
   const secret = process.env.AUTH_SESSION_SECRET;
-  if (!secret) throw new WalletAuthConfigurationError('Wallet session authentication is not configured.');
+  if (!secret) throw new WalletAuthConfigurationError('AUTH_SESSION_SECRET is not configured.');
   validateSessionSecret(secret);
   return secret;
 }
@@ -225,7 +225,7 @@ async function withPostgresClient<T>(connectionString: string, run: (client: Ins
 }
 
 export function createPostgresWalletChallengeStore(connectionString = process.env.POSTGRES_URL): WalletChallengeStore {
-  if (!connectionString) throw new WalletAuthConfigurationError('Wallet challenge storage is not configured.');
+  if (!connectionString) throw new WalletAuthConfigurationError('POSTGRES_URL is not configured.');
   return {
     async create(challenge) {
       await withPostgresClient(connectionString, async (client) => {
@@ -352,6 +352,10 @@ export async function verifyWalletChallenge(
 export function respondToWalletAuthError(error: unknown, response: WalletAuthResponse): void {
   if (error instanceof WalletAuthError) {
     response.status(error.statusCode).json({ error: error.message });
+    return;
+  }
+  if (error instanceof WalletAuthConfigurationError) {
+    response.status(503).json({ error: error.message });
     return;
   }
   response.status(503).json({ error: 'Wallet authentication is temporarily unavailable.' });

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { getAddress, recoverMessageAddress } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 
@@ -6,7 +7,9 @@ import {
   createWalletAuthMessage,
   issueWalletChallenge,
   requireAuthenticatedWallet,
+  respondToWalletAuthError,
   verifyWalletChallenge,
+  WalletAuthConfigurationError,
   type WalletAuthDependencies,
   type WalletChallenge,
   type WalletChallengeStore,
@@ -77,6 +80,13 @@ function createResponse() {
 }
 
 describe('wallet authentication boundary', () => {
+  it('uses Node ESM-resolvable imports in serverless authentication routes', () => {
+    for (const route of ['challenge', 'session', 'verify']) {
+      const source = readFileSync(new URL(`../../api/auth/${route}.ts`, import.meta.url), 'utf8');
+      expect(source).toContain("from '../../server/wallet-auth.js'");
+    }
+  });
+
   it('matches API sessions only to the connected wallet address', () => {
     const address = '0x1111111111111111111111111111111111111111';
     const now = Date.parse('2026-10-09T09:00:00.000Z');
@@ -101,7 +111,8 @@ describe('wallet authentication boundary', () => {
   it('does not request a wallet signature when the challenge endpoint rejects authentication', async () => {
     const fetcher = vi.fn(async () => ({
       ok: false,
-      json: async () => ({ error: 'Authentication service unavailable.' }),
+      status: 503,
+      json: async () => ({ error: 'AUTH_ORIGIN is not configured.' }),
     } as Response));
     const signMessage = vi.fn(async () => '0x');
 
@@ -109,8 +120,20 @@ describe('wallet authentication boundary', () => {
       '0x1111111111111111111111111111111111111111',
       signMessage,
       fetcher as typeof fetch,
-    )).rejects.toThrow('Authentication service unavailable.');
+    )).rejects.toThrow('Wallet challenge request failed (HTTP 503): AUTH_ORIGIN is not configured.');
     expect(signMessage).not.toHaveBeenCalled();
+  });
+
+  it('returns actionable configuration errors without exposing configuration values', () => {
+    const response = createResponse();
+    respondToWalletAuthError(
+      new WalletAuthConfigurationError('AUTH_SESSION_SECRET is not configured.'),
+      response,
+    );
+
+    expect(response.statusCode).toBe(503);
+    expect(response.body).toEqual({ error: 'AUTH_SESSION_SECRET is not configured.' });
+    expect(JSON.stringify(response.body)).not.toContain(sessionSecret);
   });
 
   it('confirms the cookie-backed session for the connected wallet after signature verification', async () => {
@@ -182,7 +205,7 @@ describe('wallet authentication boundary', () => {
       } as Response);
 
     await expect(authenticateWalletApi(address, async () => signature, fetcher as typeof fetch))
-      .rejects.toThrow('Authentication required.');
+      .rejects.toThrow('Authenticated session confirmation failed (HTTP 401): Authentication required.');
   });
 
   it('completes wallet authentication through the challenge, signature, verify, and session routes', async () => {

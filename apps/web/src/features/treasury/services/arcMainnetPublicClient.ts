@@ -1,4 +1,17 @@
+import { createPublicClient, defineChain, http } from 'viem';
 import { ARC_MAINNET_CHAIN_ID } from '../../../contracts/usdc';
+
+const arcMainnetReadChain = defineChain({
+  id: ARC_MAINNET_CHAIN_ID,
+  name: 'Arc Mainnet',
+  nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 6 },
+  rpcUrls: { default: { http: ['/api/chain-read'] } },
+});
+
+export const arcMainnetReadClient = createPublicClient({
+  chain: arcMainnetReadChain,
+  transport: http('/api/chain-read', { retryCount: 0, timeout: 10_000 }),
+});
 
 type PublicClientChainReader = {
   readonly getChainId?: () => Promise<unknown>;

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { usePublicClient } from 'wagmi';
+import { createPublicClient, http } from 'viem';
 
 import { TransactionHistory } from '../features/transactions/components/TransactionHistory';
 import {
@@ -9,11 +9,17 @@ import {
 } from '../features/transactions/services/transactionService';
 import { ARC_MAINNET_CHAIN_ID } from '../contracts/usdc';
 import { getArcMainnetTreasuryAddress } from '../contracts/treasury';
+import { arcMainnet } from '../config/arc';
 import { useWalletStatus } from '../hooks/useWalletStatus';
+
+const transactionHistoryClient = createPublicClient({
+  chain: arcMainnet,
+  transport: http('/api/chain-read', { retryCount: 0, timeout: 10_000 }),
+});
 
 export function TransactionsPage() {
   const { address, isArcMainnet, isConnected } = useWalletStatus();
-  const publicClient = usePublicClient({ chainId: ARC_MAINNET_CHAIN_ID });
+  const publicClient = transactionHistoryClient;
   const treasuryAddress = getArcMainnetTreasuryAddress();
   const coreVerificationQuery = useQuery({
     queryKey: ['transactions-core-verification', treasuryAddress],

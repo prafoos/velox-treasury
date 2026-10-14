@@ -3,6 +3,7 @@ import { isAddress } from 'viem';
 import { ARC_USDC_CONTRACT_ADDRESS, ARC_USDC_DECIMALS } from '../../../contracts/usdc';
 import { parseUSDC } from '../../usdc/services/usdcService';
 import { STEAKHOUSE_CORE_ADDRESS } from '../services/protocolVaultMapping';
+import { isSafeTreasuryActionDiagnostic } from '../services/treasuryActionDiagnostics';
 
 interface DepositActionModalProps { readonly isOpen: boolean; readonly onClose: () => void; readonly treasuryAddress: string | null; readonly canDeposit: boolean; readonly isSubmitting: boolean; readonly status: string | null; readonly onDeposit: (amount: bigint) => Promise<void>; readonly canViewAdmin?: boolean; }
 
@@ -28,7 +29,7 @@ export function DepositActionModal({ isOpen, onClose, treasuryAddress, canDeposi
   );
   const submit = async () => { try { setError(null); const parsed = parseUSDC(amount); if (parsed <= 0n) throw new Error('Enter a USDC amount greater than zero.'); await onDeposit(parsed); setAmount(''); } catch (cause) { setError(cause instanceof Error ? cause.message : 'Deposit failed or was rejected.'); } };
   const visibleError = error
-    ? shouldShowDepositDetails(canViewAdmin, error)
+    ? canViewAdmin || isSafeTreasuryActionDiagnostic(error) || shouldShowDepositDetails(false, error)
       ? error
       : 'Your deposit could not be completed. Please try again.'
     : null;

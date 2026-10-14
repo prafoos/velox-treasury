@@ -267,17 +267,34 @@ describe('WalletConnection automatic authentication', () => {
     );
   });
 
-  it('does not request a signature while the server-side session check is failing', async () => {
+  it('automatically authenticates when a connected wallet session check fails', async () => {
     mocks.apiSession.error = new Error('Wallet session authentication is not configured.');
 
     await render();
 
-    expect(mocks.authenticateWalletApi).not.toHaveBeenCalled();
-    expect(mocks.signMessageAsync).not.toHaveBeenCalled();
-    expect(container.textContent).toContain('Wallet session check failed');
-    expect(container.textContent).toContain('Wallet session authentication is not configured.');
+    expect(mocks.authenticateWalletApi).toHaveBeenCalledTimes(1);
+    expect(mocks.authenticateWalletApi.mock.calls[0]?.[0]).toBe(mocks.wallet.address);
+    expect(mocks.setQueryData).toHaveBeenCalledWith(
+      ['wallet-api-session', mocks.wallet.address],
+      expect.objectContaining({ authenticatedWalletAddress: mocks.wallet.address }),
+    );
+  });
+
+  it('offers wallet-auth retry when automatic authentication fails after a session check error', async () => {
+    mocks.apiSession.error = new Error('Wallet session authentication is not configured.');
+    mocks.authenticateWalletApi.mockRejectedValue(new Error('Authentication service unavailable.'));
+    mocks.setQueryData.mockImplementation((key, value) => {
+      if (Array.isArray(key) && key[0] === 'wallet-api-auth-progress') {
+        mocks.authProgress = value as typeof mocks.authProgress;
+      }
+    });
+
+    await render();
+
+    expect(mocks.authenticateWalletApi).toHaveBeenCalledTimes(1);
+    expect(container.textContent).toContain('Authentication service unavailable.');
     expect(Array.from(container.querySelectorAll('button')).some((button) => (
-      button.textContent?.includes('Retry session check')
+      button.textContent?.includes('Retry wallet sign-in')
     ))).toBe(true);
   });
 

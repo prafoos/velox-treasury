@@ -9,6 +9,7 @@ import {
   ARC_USDC_CONTRACT_ADDRESS,
   usdcReadAbi,
 } from '../../../contracts/usdc';
+import { arcMainnetReadClient, withVerifiedArcMainnetPublicClient } from '../../treasury/services/arcMainnetPublicClient';
 import { useWalletStatus } from '../../../hooks/useWalletStatus';
 import {
   createUSDCBalanceDescriptor,
@@ -59,12 +60,15 @@ export function useUSDCBalance(): USDCBalanceResult {
         throw new Error('USDC balance reads require Arc Mainnet (Chain ID 5042)');
       }
 
-      return readContract(connectorClient, {
-        address: ARC_USDC_CONTRACT_ADDRESS,
-        abi: usdcReadAbi,
-        functionName: 'balanceOf',
-        args: [address as Address],
-      });
+      return withVerifiedArcMainnetPublicClient(
+        arcMainnetReadClient,
+        () => readContract(arcMainnetReadClient, {
+          address: ARC_USDC_CONTRACT_ADDRESS,
+          abi: usdcReadAbi,
+          functionName: 'balanceOf',
+          args: [address as Address],
+        }),
+      );
     },
   });
 

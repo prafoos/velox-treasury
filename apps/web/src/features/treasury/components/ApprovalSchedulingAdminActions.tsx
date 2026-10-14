@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { parseEventLogs, type Address, type Hex } from 'viem';
-import { usePublicClient, useWriteContract } from 'wagmi';
+import { useWriteContract } from 'wagmi';
 
 import { useWalletStatus } from '../../../hooks/useWalletStatus';
 import { POLICY_ADMIN_ROLE, veloxTreasuryAbi } from '../../../contracts/treasury';
 import { ARC_MAINNET_CHAIN_ID, ARC_USDC_CONTRACT_ADDRESS } from '../../../contracts/usdc';
-import { withVerifiedArcMainnetPublicClient } from '../services/arcMainnetPublicClient';
+import { arcMainnetReadClient, withVerifiedArcMainnetPublicClient } from '../services/arcMainnetPublicClient';
 import {
   APPROVAL_ABSOLUTE_CAP,
   APPROVAL_RELATIVE_CAP_BPS,
@@ -24,7 +24,7 @@ type ApprovalType = 'protocol' | 'asset';
 
 export function ApprovalSchedulingAdminActions() {
   const { address, isConnected, isArcMainnet } = useWalletStatus();
-  const publicClient = usePublicClient({ chainId: ARC_MAINNET_CHAIN_ID });
+  const publicClient = arcMainnetReadClient;
   const { writeContractAsync, isPending } = useWriteContract();
   const [confirmation, setConfirmation] = useState<ApprovalType | null>(null);
   const [submitting, setSubmitting] = useState<ApprovalType | null>(null);
@@ -33,10 +33,10 @@ export function ApprovalSchedulingAdminActions() {
 
   const preflightQuery = useQuery({
     queryKey: ['approval-scheduling-admin-preflight', address?.toLowerCase() ?? null],
-    enabled: Boolean(isConnected && isArcMainnet && address && publicClient),
+    enabled: Boolean(isConnected && isArcMainnet && address),
     retry: false,
     queryFn: async () => {
-      if (!publicClient || !address) throw new Error('Arc Mainnet wallet or public client is unavailable.');
+      if (!address) throw new Error('Arc Mainnet wallet is unavailable.');
       const authorized = await withVerifiedArcMainnetPublicClient(publicClient, () => publicClient.readContract({
         address: APPROVAL_SCHEDULE_TARGETS.core,
         abi: veloxTreasuryAbi,
@@ -68,7 +68,7 @@ export function ApprovalSchedulingAdminActions() {
   });
 
   const submitApproval = async (approval: ApprovalType) => {
-    if (!publicClient || !address) return;
+    if (!address) return;
     setSubmitting(approval);
     setStatus(null);
     setError(null);
