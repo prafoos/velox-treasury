@@ -197,6 +197,7 @@ export function TreasuryPage() {
         isOpen={modalState.isDepositOpen}
         onClose={closeDepositModal}
         treasuryAddress={treasuryAddress}
+        walletUSDC={walletUsdc.formattedAmount}
         canDeposit={deposit.canDeposit}
         isSubmitting={deposit.isSubmitting}
         status={deposit.status}
@@ -207,6 +208,7 @@ export function TreasuryPage() {
         isOpen={modalState.isWithdrawOpen}
         onClose={closeWithdrawModal}
         canWithdraw={withdrawal.canWithdraw}
+        withdrawableAmount={userProjection?.immediateWithdrawalLiquidity.value ?? null}
         isSubmitting={withdrawal.isSubmitting}
         status={withdrawal.status}
         onWithdraw={withdrawal.withdraw}

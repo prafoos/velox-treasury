@@ -1,9 +1,15 @@
+/** @vitest-environment jsdom */
+
+import { act } from 'react';
+import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { DepositActionModal } from './DepositActionModal';
 import { parseUSDC } from '../../usdc/services/usdcService';
 import { STEAKHOUSE_CORE_ADDRESS } from '../services/protocolVaultMapping';
+
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 describe('DepositActionModal amount input', () => {
   it('keeps the amount editable and parses 1 USDC without changing the read-only asset field', () => {
@@ -12,6 +18,7 @@ describe('DepositActionModal amount input', () => {
         isOpen
         onClose={() => undefined}
         treasuryAddress={STEAKHOUSE_CORE_ADDRESS}
+        walletUSDC={null}
         canDeposit
         isSubmitting={false}
         status={null}
@@ -42,6 +49,7 @@ describe('DepositActionModal amount input', () => {
         isOpen
         onClose={() => undefined}
         treasuryAddress={STEAKHOUSE_CORE_ADDRESS}
+        walletUSDC={null}
         canDeposit
         isSubmitting={false}
         status={status}
@@ -58,6 +66,7 @@ describe('DepositActionModal amount input', () => {
         isOpen
         onClose={() => undefined}
         treasuryAddress="0x1111111111111111111111111111111111111111"
+        walletUSDC={null}
         canDeposit
         isSubmitting={false}
         status={null}
@@ -80,6 +89,7 @@ describe('DepositActionModal amount input', () => {
         isOpen
         onClose={() => undefined}
         treasuryAddress={STEAKHOUSE_CORE_ADDRESS}
+        walletUSDC={null}
         canDeposit
         isSubmitting={false}
         status="A remaining allowance of 1.25 USDC is approved. Manually confirm USDC approve(Core, 0) in your wallet."
@@ -98,6 +108,7 @@ describe('DepositActionModal amount input', () => {
         isOpen
         onClose={() => undefined}
         treasuryAddress={STEAKHOUSE_CORE_ADDRESS}
+        walletUSDC={null}
         canDeposit
         isSubmitting={false}
         status={message}
@@ -106,5 +117,92 @@ describe('DepositActionModal amount input', () => {
     );
 
     expect(markup).toContain(message);
+  });
+
+  it('shows the connected wallet USDC balance', () => {
+    const markup = renderToStaticMarkup(
+      <DepositActionModal
+        isOpen
+        onClose={() => undefined}
+        treasuryAddress={STEAKHOUSE_CORE_ADDRESS}
+        walletUSDC="125.50"
+        canDeposit
+        isSubmitting={false}
+        status={null}
+        onDeposit={async () => undefined}
+      />,
+    );
+
+    expect(markup).toContain('Connected wallet USDC balance: 125.50 USDC');
+  });
+
+  it('closes only after a confirmed deposit, not while pending or failed', async () => {
+    vi.useFakeTimers();
+    const container = document.createElement('div');
+    const root = createRoot(container);
+    const onClose = vi.fn();
+    try {
+      const renderStatus = async (status: string) => {
+        await act(async () => {
+          root.render(
+            <DepositActionModal
+              isOpen
+              onClose={onClose}
+              treasuryAddress={STEAKHOUSE_CORE_ADDRESS}
+              walletUSDC="125.50"
+              canDeposit
+              isSubmitting={status.startsWith('Submitting')}
+              status={status}
+              onDeposit={async () => undefined}
+            />,
+          );
+        });
+      };
+
+      await renderStatus('Submitting Treasury deposit…');
+      await act(async () => { vi.advanceTimersByTime(2_000); });
+      expect(onClose).not.toHaveBeenCalled();
+
+      await renderStatus('Deposit transaction reverted on Arc Mainnet.');
+      await act(async () => { vi.advanceTimersByTime(2_000); });
+      expect(onClose).not.toHaveBeenCalled();
+
+      await renderStatus('Deposit confirmed. No surplus is currently eligible.');
+      await act(async () => { vi.advanceTimersByTime(1_999); });
+      expect(onClose).not.toHaveBeenCalled();
+      await act(async () => { vi.advanceTimersByTime(1); });
+      expect(onClose).toHaveBeenCalledOnce();
+    } finally {
+      await act(async () => root.unmount());
+      vi.useRealTimers();
+    }
+  });
+
+  it('clears the success-close timer when the modal unmounts', async () => {
+    vi.useFakeTimers();
+    const container = document.createElement('div');
+    const root = createRoot(container);
+    const onClose = vi.fn();
+    try {
+      await act(async () => {
+        root.render(
+          <DepositActionModal
+            isOpen
+            onClose={onClose}
+            treasuryAddress={STEAKHOUSE_CORE_ADDRESS}
+            walletUSDC={null}
+            canDeposit
+            isSubmitting={false}
+            status="Deposit confirmed. No surplus is currently eligible."
+            onDeposit={async () => undefined}
+          />,
+        );
+      });
+      await act(async () => root.unmount());
+      await act(async () => { vi.advanceTimersByTime(2_000); });
+      expect(onClose).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

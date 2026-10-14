@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { ARC_USDC_CONTRACT_ADDRESS, ARC_USDC_DECIMALS } from '../../../contracts/usdc';
+import { formatUSDC } from '../../usdc/services/usdcService';
 import { isSafeTreasuryActionDiagnostic } from '../services/treasuryActionDiagnostics';
 
 interface WithdrawActionModalProps {
   readonly isOpen: boolean;
   readonly onClose: () => void;
   readonly canWithdraw: boolean;
+  readonly withdrawableAmount: bigint | null;
   readonly isSubmitting: boolean;
   readonly status: string | null;
   readonly onWithdraw: (recipient: string, amount: string) => Promise<unknown>;
@@ -15,10 +17,20 @@ interface WithdrawActionModalProps {
   readonly canViewAdmin?: boolean;
 }
 
-export function WithdrawActionModal({ isOpen, onClose, canWithdraw, isSubmitting, status, onWithdraw, authorizationMessage, walletAddress, canViewAdmin = false }: WithdrawActionModalProps) {
+export function WithdrawActionModal({ isOpen, onClose, canWithdraw, withdrawableAmount, isSubmitting, status, onWithdraw, authorizationMessage, walletAddress, canViewAdmin = false }: WithdrawActionModalProps) {
   const [recipient, setRecipient] = useState(walletAddress ?? '');
   const [amount, setAmount] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const transactionSucceeded = status?.startsWith('Withdrawal confirmed on Arc Mainnet.')
+    || status?.startsWith('Withdrawal and strategy deallocation confirmed on Arc Mainnet.')
+    || false;
+  useEffect(() => {
+    if (!isOpen || !transactionSucceeded) return;
+    const timeoutId = window.setTimeout(() => onCloseRef.current(), 2_000);
+    return () => window.clearTimeout(timeoutId);
+  }, [isOpen, transactionSucceeded]);
   const submit = async () => {
     const targetRecipient = walletAddress ?? recipient;
     try { setError(null); await onWithdraw(targetRecipient, amount); setRecipient(walletAddress ?? ''); setAmount(''); } catch (cause) { setError(cause instanceof Error ? cause.message : 'Treasury withdrawal failed or was rejected.'); }
@@ -63,6 +75,9 @@ export function WithdrawActionModal({ isOpen, onClose, canWithdraw, isSubmitting
           {authorizationMessage && <div className="vx-step-callout warning">{authorizationMessage}</div>}
           {visibleError && <div className="vx-step-callout warning">{visibleError}</div>}
           {visibleStatus && <div className="vx-step-callout info">{visibleStatus}</div>}
+          <div className="vx-step-callout info" aria-live="polite">
+            Currently available to withdraw: {formatUSDC(withdrawableAmount) ?? 'Unavailable'} USDC
+          </div>
 
           <div className="vx-form-group">
             <label htmlFor="withdraw-asset" className="vx-form-label">
