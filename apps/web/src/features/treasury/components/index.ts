@@ -5,6 +5,7 @@ export { AdminStrategyProjection } from './CoreStateDashboard';
 export { EmergencyControlsModal } from './EmergencyControlsModal';
 export { EmergencyRiskControls } from './EmergencyRiskControls';
 export { TreasuryAllocationOverview } from './TreasuryAllocationOverview';
+export { TreasuryAllocationSection } from './TreasuryAllocationSection';
 export { TreasuryBalanceCards } from './TreasuryBalanceCards';
 export { TreasuryRulesModal } from './TreasuryRulesModal';
 export { TreasuryRulesSection } from './TreasuryRulesSection';

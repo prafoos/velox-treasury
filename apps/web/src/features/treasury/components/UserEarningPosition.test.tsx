@@ -46,7 +46,7 @@ describe('UserEarningPosition', () => {
       strategyStatus: staleApprovedStrategy,
     });
     expect(markup).toContain('Temporarily paused: The strategy value needs to be refreshed');
-    expect(markup).toContain('Recent allocation activity is not available in this view');
+    expect(markup).not.toContain('Recent allocation activity is not available in this view');
     expect(markup).not.toContain('STALE');
     expect(markup).not.toContain('25416075');
     expect(markup).not.toContain('25561179');
@@ -83,6 +83,7 @@ describe('UserEarningPosition', () => {
     expect(markup).toContain('Your Steakhouse position');
     expect(markup).toContain('1.25 USDC');
     expect(markup).toContain('Your earning position is verified.');
+    expect(markup).not.toContain('Recent allocation activity is not available in this view');
     expect(markup).not.toMatch(/shares|total deployed|approved|strategy exposure/i);
   });
 

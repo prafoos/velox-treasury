@@ -32,6 +32,8 @@ describe('TreasuryAllocationOverview', () => {
     expect(markup).toContain('not separate funded pools');
     expect(markup).toContain('Depositing USDC does not transfer funds between buckets');
     expect(markup).toContain('strategy deployment is a separate role-gated operation');
+    expect(markup).toContain('Core Sweep Liquidity Buffer target/classification');
+    expect(markup).toContain('does not establish funds reserved or spent for swap operations');
     expect(markup).not.toContain('Draft target');
   });
 });

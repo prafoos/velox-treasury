@@ -51,6 +51,7 @@ const SAFE_ETH_CALLS = new Map<string, ReadonlyMap<string, SafeCall>>([
     safeCall('userBalance(address)', 1, { 0: null }),
     safeCall('immediatelyWithdrawableValue(address)', 1, { 0: null }),
     safeCall('liquidUSDC()', 0),
+    safeCall('bucketPolicy()', 0),
     safeCall('userStrategyPosition(address,address)', 2, { 0: null, 1: ADAPTER_ADDRESS }),
     safeCall('totalDeployed()', 0),
   ])],

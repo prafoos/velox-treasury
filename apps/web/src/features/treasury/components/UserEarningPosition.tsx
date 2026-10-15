@@ -108,9 +108,6 @@ export function UserEarningPosition({
             Action required: Strategy eligibility could not be verified.
           </p>
         )}
-        <p className="vx-text-muted">
-          Recent allocation activity is not available in this view; this does not confirm that no attempts occurred.
-        </p>
       </>
     );
   } else {

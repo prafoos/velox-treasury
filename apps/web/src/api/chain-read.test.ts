@@ -83,6 +83,7 @@ describe('Arc Mainnet chain-read relay', () => {
     rpcRequest('eth_call', [{ to: core, data: toFunctionSelector('usdc()') }, 'latest']),
     rpcRequest('eth_call', [{ to: core, data: toFunctionSelector('paused()') }, 'latest']),
     rpcRequest('eth_call', [{ to: core, data: toFunctionSelector('liquidUSDC()') }, 'latest']),
+    rpcRequest('eth_call', [{ to: core, data: toFunctionSelector('bucketPolicy()') }, 'latest']),
     rpcRequest('eth_call', [{ to: core, data: encodedCall('userBalance(address)', userAddress) }, 'latest']),
     rpcRequest('eth_call', [{ to: core, data: encodedCall('immediatelyWithdrawableValue(address)', userAddress) }, 'latest']),
     rpcRequest('eth_call', [{

@@ -361,7 +361,9 @@ export function createAllocationBuckets(
       targetPercentageBps: hasCompleteAllocationDraft ? policy.allocations[id] ?? null : null,
       currentAmount: normalizedCurrent,
       status,
-      description,
+      description: id === 'swap_liquidity'
+        ? `${description} This is the Core Sweep Liquidity Buffer target/classification; it does not establish funds reserved or spent for swap operations.`
+        : description,
       targetStage,
     };
   });

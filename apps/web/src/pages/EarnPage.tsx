@@ -1,8 +1,9 @@
 import { useTreasurySummary } from '../features/treasury/hooks/useTreasurySummary';
 import { useTreasuryStrategyState } from '../features/treasury/hooks/useTreasuryStrategyState';
 import { useTreasuryBucketTargets } from '../features/treasury/hooks/useTreasuryBucketTargets';
+import { useTreasuryAllocationPolicy } from '../features/treasury/hooks/useTreasuryAllocationPolicy';
 import { canViewAdminPanel } from '../features/treasury/access/adminAccess';
-import { AdminStrategyProjection, YieldStrategySection } from '../features/treasury/components';
+import { AdminStrategyProjection, TreasuryAllocationSection, YieldStrategySection } from '../features/treasury/components';
 
 export function EarnPage() {
   const {
@@ -28,6 +29,7 @@ export function EarnPage() {
     summary.address,
   );
   const bucketState = useTreasuryBucketTargets(summary.isArcMainnet && canViewAdmin);
+  const allocationPolicyState = useTreasuryAllocationPolicy(summary.isArcMainnet);
 
   return (
     <div className="vx-treasury-page">
@@ -51,6 +53,13 @@ export function EarnPage() {
           </span>
         </div>
       </header>
+
+      <TreasuryAllocationSection
+        policy={allocationPolicyState.policy}
+        isLoading={allocationPolicyState.isLoading}
+        error={allocationPolicyState.error}
+        onRetry={() => { void allocationPolicyState.refetch(); }}
+      />
 
       <YieldStrategySection
         strategyState={null}

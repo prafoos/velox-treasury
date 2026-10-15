@@ -2,7 +2,11 @@
   "rewrites": [
     { "source": "/api/ai/user", "destination": "/api/ai-user" },
     { "source": "/api/ai/admin", "destination": "/api/ai-admin" },
-    { "source": "/ai-assistant", "destination": "/" }
+    { "source": "/ai-assistant", "destination": "/" },
+    { "source": "/earn", "destination": "/" },
+    { "source": "/treasury", "destination": "/" },
+    { "source": "/swap", "destination": "/" },
+    { "source": "/transactions", "destination": "/" }
   ],
   "crons": [
     {
